@@ -2,86 +2,115 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Мини CRM - Экскаватор-погрузчик</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>VOLVO BL71B CRM</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app">
-    <header class="app-header">
-      <h1>Мини CRM</h1>
-      <p>Один владелец • Одна единица техники</p>
+  <div class="mobile-app">
+    <header class="topbar">
+      <div class="brand-line"></div>
+      <div class="topbar-row">
+        <h1 class="brand-title">VOLVO <span>BL71B</span></h1>
+        <button class="icon-status" type="button" aria-label="Статус">
+          <span></span>
+        </button>
+      </div>
     </header>
 
-    <nav class="tabs" aria-label="Разделы CRM">
-      <button class="tab-btn active" type="button" data-section="dashboard">Dashboard</button>
-      <button class="tab-btn" type="button" data-section="add-request">Добавить заявку</button>
-      <button class="tab-btn" type="button" data-section="works">Работы</button>
-      <button class="tab-btn" type="button" data-section="clients">Клиенты</button>
-    </nav>
-
-    <main>
+    <main class="app-main">
       <section class="section active" id="dashboard">
-        <div class="metrics-grid">
-          <article class="metric-card">
-            <h2>Сегодня часов</h2>
-            <p id="todayHours">0</p>
+        <article class="hero-card">
+          <div class="hero-image" role="img" aria-label="Экскаватор-погрузчик Volvo"></div>
+        </article>
+
+        <div class="stats-grid">
+          <article class="stat-card stat-card-accent">
+            <p>Сегодня часов</p>
+            <strong id="todayHours">0</strong>
           </article>
-          <article class="metric-card">
-            <h2>Сегодня денег</h2>
-            <p id="todayAmount">0 ₽</p>
+          <article class="stat-card stat-card-dark">
+            <p>Сегодня денег</p>
+            <strong id="todayAmount">0 ₽</strong>
           </article>
-          <article class="metric-card">
-            <h2>За месяц часов</h2>
-            <p id="monthHours">0</p>
+          <article class="stat-card stat-card-accent">
+            <p>За месяц часов</p>
+            <strong id="monthHours">0</strong>
           </article>
-          <article class="metric-card">
-            <h2>За месяц денег</h2>
-            <p id="monthAmount">0 ₽</p>
+          <article class="stat-card stat-card-dark">
+            <p>За месяц денег</p>
+            <strong id="monthAmount">0 ₽</strong>
           </article>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="panel">
-            <div class="panel-head">
-              <h2>Следующая работа</h2>
-            </div>
-            <div id="nextJob" class="next-job-empty">Пока нет будущих заявок.</div>
+        <div class="economics-grid">
+          <article class="profit-card">
+            <p>Чистая прибыль сегодня</p>
+            <strong id="todayProfit">0 ₽</strong>
           </article>
 
-          <article class="panel">
-            <div class="panel-head">
-              <h2>Цена дизеля</h2>
-              <button id="refreshFuelBtn" type="button" class="btn-secondary">Обновить</button>
+          <article class="performance-card">
+            <h3>Сегодня</h3>
+            <div class="perf-row"><span>Часы</span><strong id="perfHours">0</strong></div>
+            <div class="perf-row"><span>Выручка</span><strong id="perfRevenue">0 ₽</strong></div>
+            <div class="perf-row"><span>Топливо</span><strong id="perfFuel">0 л</strong></div>
+            <div class="perf-bars" aria-hidden="true">
+              <div class="perf-bar">
+                <span>Выручка</span>
+                <b id="perfRevenueFill"></b>
+              </div>
+              <div class="perf-bar perf-bar-fuel">
+                <span>Топливо</span>
+                <b id="perfFuelFill"></b>
+              </div>
             </div>
-            <div class="fuel-price" id="fuelPrice">-</div>
-            <div class="fuel-meta" id="fuelMeta">Загрузка данных...</div>
-          </article>
-
-          <article class="panel feature-panel">
-            <div class="panel-head">
-              <h2>Конфигурация функций</h2>
-            </div>
-            <pre id="featureFlags" class="flags"></pre>
           </article>
         </div>
+
+        <article class="next-job-card">
+          <div class="panel-header">
+            <h2>Следующая заявка</h2>
+            <span class="panel-arrow">→</span>
+          </div>
+          <div id="nextJob" class="empty-state">Пока нет будущих заявок.</div>
+        </article>
+
+        <article class="fuel-strip">
+          <div class="fuel-icon">⛽</div>
+          <div class="fuel-text">
+            <p>Цена дизеля Лукойл / Driff</p>
+            <strong id="fuelPrice">-</strong>
+          </div>
+          <button id="refreshFuelBtn" type="button" class="fuel-refresh">Обновить</button>
+        </article>
+        <p id="fuelMeta" class="fuel-meta">Загрузка данных...</p>
+
+        <article class="works-panel">
+          <div class="panel-header panel-header-compact">
+            <h2>Последние работы</h2>
+          </div>
+          <div id="worksList" class="works-list"></div>
+        </article>
+
+        <article class="feature-panel">
+          <h3>Конфигурация функций</h3>
+          <pre id="featureFlags"></pre>
+        </article>
       </section>
 
       <section class="section" id="add-request">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Новая заявка</h2>
-          </div>
+        <article class="form-shell">
+          <h2>Новая заявка</h2>
 
           <form id="requestForm" class="request-form">
             <label>
               Имя
-              <input type="text" name="name" required placeholder="Например, Иван Петров">
+              <input type="text" name="name" required placeholder="Петр Иванов">
             </label>
 
             <label>
               Телефон
-              <input type="tel" name="phone" required placeholder="+7 (___) ___-__-__">
+              <input type="tel" name="phone" required placeholder="+7 923 765-43-21">
             </label>
 
             <label>
@@ -91,78 +120,95 @@
 
             <label>
               Тип работ
-              <input type="text" name="workType" required placeholder="Копка траншеи">
+              <input type="text" name="workType" required placeholder="Планировка участка">
             </label>
 
             <label>
               Адрес
-              <input type="text" name="address" required placeholder="г. Москва, ул. Пример, 1">
+              <input type="text" name="address" required placeholder="д. Зеленово, ул. Лесная, 6">
             </label>
 
             <label>
               Часы работы
-              <input type="number" name="hours" min="0" step="0.5" required placeholder="4">
+              <input type="number" name="hours" min="0" step="0.5" required placeholder="6">
             </label>
 
             <label>
               Сумма
-              <input type="number" name="amount" min="0" step="1" required placeholder="12000">
+              <input type="number" name="amount" min="0" step="1" required placeholder="30000">
             </label>
 
-            <button type="submit" class="btn-primary">Добавить заявку</button>
+            <label>
+              Топливо (литры)
+              <input type="number" name="fuelLiters" min="0" step="0.1" placeholder="Если пусто, посчитается автоматически">
+            </label>
+
+            <button type="submit" class="cta-btn">Добавить заявку</button>
           </form>
 
           <p id="formMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
 
-      <section class="section" id="works">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Таблица работ</h2>
+      <section class="section" id="history">
+        <article class="history-shell">
+          <div class="panel-header">
+            <h2>История работ</h2>
+            <button id="exportHistoryCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
           </div>
-          <div class="table-wrap">
-            <table>
+
+          <div class="history-filters" id="historyFilters">
+            <button type="button" class="history-filter-btn" data-range="today">Сегодня</button>
+            <button type="button" class="history-filter-btn" data-range="week">Неделя</button>
+            <button type="button" class="history-filter-btn" data-range="month">Месяц</button>
+            <button type="button" class="history-filter-btn active" data-range="all">Все</button>
+          </div>
+
+          <div class="history-table-wrap">
+            <table class="history-table">
               <thead>
                 <tr>
                   <th>Дата</th>
                   <th>Клиент</th>
+                  <th>Телефон</th>
                   <th>Тип работ</th>
+                  <th>Адрес</th>
                   <th>Часы</th>
                   <th>Сумма</th>
-                  <th>Адрес</th>
+                  <th>Топливо (л)</th>
+                  <th>Статус</th>
+                  <th>Действие</th>
                 </tr>
               </thead>
-              <tbody id="worksTableBody"></tbody>
+              <tbody id="historyTableBody"></tbody>
             </table>
           </div>
+
+          <p id="historyMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
 
       <section class="section" id="clients">
-        <article class="panel">
-          <div class="panel-head panel-head-wrap">
-            <h2>Таблица клиентов</h2>
-            <button id="exportCsvBtn" type="button" class="btn-secondary">Экспорт CSV</button>
+        <article class="clients-shell">
+          <div class="panel-header">
+            <h2>Клиенты</h2>
+            <button id="exportCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Имя</th>
-                  <th>Телефон</th>
-                  <th>Количество заявок</th>
-                  <th>Общая сумма</th>
-                </tr>
-              </thead>
-              <tbody id="clientsTableBody"></tbody>
-            </table>
-          </div>
+          <div id="clientsList" class="clients-list"></div>
+          <p id="clientsMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
     </main>
+
+    <nav class="bottom-nav" aria-label="Нижняя навигация">
+      <button class="bottom-nav-btn active" type="button" data-section="dashboard">Главная</button>
+      <button class="bottom-nav-btn" type="button" data-section="add-request">Добавить</button>
+      <button class="bottom-nav-btn" type="button" data-section="history">История</button>
+      <button class="bottom-nav-btn" type="button" data-section="clients">Клиенты</button>
+    </nav>
   </div>
 
   <script src="app.js"></script>
 </body>
 </html>
+
