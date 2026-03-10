@@ -1,0 +1,679 @@
+﻿
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tractor Dispatch CRM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-logo">CRM</div>
+        <strong class="brand-title">CRM</strong>
+        <span class="brand-caret">v</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="newRequestBtn" class="icon-btn top-action-btn" type="button" aria-label="Добавить заявку">
+          <span class="icon-glyph">+</span>
+        </button>
+        <button id="notifyPermissionBtn" class="icon-btn top-action-btn notify-icon-btn" type="button" aria-label="Уведомления">
+          <span class="icon-glyph">!</span>
+        </button>
+        <button class="icon-btn top-action-btn" type="button" aria-label="Сообщения">
+          <span class="icon-glyph">...</span>
+          <span class="icon-badge">2</span>
+        </button>
+        <button class="avatar-chip" type="button" aria-label="Профиль">
+          <span class="avatar-dot">А</span>
+          <span>Андрей</span>
+        </button>
+        <button id="mobileNavToggle" class="icon-btn mobile-nav-toggle" type="button" aria-label="Открыть меню">
+          <span class="icon-glyph">=</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <nav class="main-nav" id="mainNav">
+        <button class="nav-btn active" data-screen="dashboard" type="button"><span class="nav-ico">◻</span><span>Заявки</span></button>
+        <button class="nav-btn" data-screen="requests" type="button"><span class="nav-ico">◼</span><span>Все заявки</span></button>
+        <button class="nav-btn" data-screen="clients" type="button"><span class="nav-ico">◎</span><span>Клиенты</span></button>
+        <button class="nav-btn" data-screen="machines" type="button"><span class="nav-ico">⚙</span><span>Техника</span></button>
+        <button class="nav-btn" data-screen="employees" type="button"><span class="nav-ico">👤</span><span>Сотрудники</span></button>
+        <button class="nav-btn" data-screen="services" type="button"><span class="nav-ico">✳</span><span>Услуги</span></button>
+        <button class="nav-btn" data-screen="zones" type="button"><span class="nav-ico">⌂</span><span>Зоны</span></button>
+        <button class="nav-btn" data-screen="calendar" type="button"><span class="nav-ico">▦</span><span>Календарь</span></button>
+        <button class="nav-btn" data-screen="booking" type="button"><span class="nav-ico">＋</span><span>Форма заказа</span></button>
+        <button class="nav-btn" data-screen="campaigns" type="button"><span class="nav-ico">✉</span><span>Рассылки</span></button>
+      </nav>
+
+      <main class="app-main">
+        <section id="inAppNoticeBox" class="notice-box hidden">
+          <div class="notice-head">
+            <h2>Напоминания</h2>
+            <button id="clearNoticesBtn" class="btn btn-link" type="button">Очистить</button>
+          </div>
+          <div id="noticeList" class="notice-list"></div>
+        </section>
+
+        <section class="screen active" data-screen="dashboard" id="screenDashboard">
+      <section class="panel dashboard-kpi-panel">
+        <div id="summaryCards" class="summary-grid summary-grid-dashboard"></div>
+      </section>
+
+      <section class="dashboard-main-grid">
+        <article class="panel dashboard-requests-panel">
+          <div class="panel-head">
+            <h2>Текущие заявки</h2>
+            <p class="muted">Оперативный список на сегодня</p>
+          </div>
+          <div class="dashboard-request-tabs">
+            <button class="chip active" type="button">Все</button>
+            <button class="chip" type="button">В работе</button>
+            <button class="chip" type="button">Просрочены</button>
+          </div>
+          <div id="dashboardRequestsList" class="dashboard-request-list"></div>
+        </article>
+
+        <article class="panel dashboard-calendar-panel">
+          <div class="panel-head">
+            <h2>Календарь работ</h2>
+            <div class="dashboard-calendar-toolbar">
+              <button class="icon-btn icon-btn-sm" type="button" aria-label="Предыдущий период" disabled><</button>
+              <p class="muted" id="dashboardCalendarMonth">Текущий месяц</p>
+              <button class="icon-btn icon-btn-sm" type="button" aria-label="Следующий период" disabled>></button>
+            </div>
+          </div>
+          <div class="dashboard-weekdays">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+          </div>
+          <div id="dashboardCalendarGrid" class="dashboard-calendar-grid"></div>
+          <div class="dashboard-calendar-day">
+            <h3 id="dashboardDayTitle">Задачи на день</h3>
+            <div id="dashboardCalendarTasks" class="dashboard-task-list"></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-bottom-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Техника в работе</h2>
+            
+          </div>
+          <div id="dashboardMachineCards" class="dashboard-machine-cards"></div>
+          <button class="btn btn-ghost dash-add-btn" type="button" id="dashboardAddRequestBtn">+ Добавить заявку</button>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>Список клиентов</h2></div>
+          <div id="dashboardClientsList" class="dashboard-clients-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>Финансы</h2></div>
+          <div id="dashboardFinanceBox" class="dashboard-finance-box"></div>
+          <button id="dashboardCreateCampaignBtn" class="btn btn-primary finance-btn" type="button">Создать рассылку</button>
+        </article>
+      </section>
+
+      <section class="panel analytics-panel">
+        <div class="panel-head"><h2>Операционная аналитика</h2></div>
+        <div id="opsSummaryCards" class="summary-grid summary-grid-ops"></div>
+        <div class="analytics-grid">
+          <article class="analytics-card">
+            <h3>Загрузка техники по дням</h3>
+            <div id="analyticsLoadByDay" class="analytics-list"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Заявки по типам техники</h3>
+            <div id="analyticsByMachineType" class="analytics-list"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Загрузка сотрудников</h3>
+            <div id="analyticsByEmployee" class="analytics-list"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Неназначенные / база</h3>
+            <div id="analyticsUnassigned" class="analytics-list"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Источники заявок (кол-во)</h3>
+            <div id="analyticsSourceCount" class="analytics-list"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Источники заявок (выручка)</h3>
+            <div id="analyticsSourceRevenue" class="analytics-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Маркетинговые триггеры</h2></div>
+        <div id="marketingTasksList" class="analytics-list"></div>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="requests" id="screenRequests">
+      <section class="panel filters-panel">
+        <div class="panel-head"><h2>Фильтры и сортировка заявок</h2></div>
+        <div class="filters-grid">
+          <label class="field">
+            <span>Поиск</span>
+            <input id="searchInput" type="search" placeholder="Имя, телефон, адрес, вид работ">
+          </label>
+          <label class="field">
+            <span>Статус</span>
+            <select id="statusFilter">
+              <option value="all">Все статусы</option>
+              <option value="new">Новая</option>
+              <option value="confirmed">Подтверждена</option>
+              <option value="in_work">В работе</option>
+              <option value="completed">Завершена</option>
+              <option value="canceled">Отменена</option>
+              <option value="overdue">Просрочена</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Поселок</span>
+            <select id="settlementFilter"><option value="all">Все</option></select>
+          </label>
+          <label class="field">
+            <span>Услуга / работы</span>
+            <select id="workTypeFilter"><option value="all">Все</option></select>
+          </label>
+          <label class="field">
+            <span>Источник</span>
+            <select id="sourceFilter"><option value="all">Все</option></select>
+          </label>
+          <label class="field">
+            <span>Сегмент</span>
+            <select id="requestSegmentFilter">
+              <option value="all">Все</option>
+              <option value="new_clients">Новые клиенты</option>
+              <option value="repeat_clients">Повторные клиенты</option>
+              <option value="with_debt">С долгом</option>
+              <option value="seasonal">Сезонные</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Период</span>
+            <select id="periodFilter">
+              <option value="all">Все даты</option>
+              <option value="today">Сегодня</option>
+              <option value="tomorrow">Завтра</option>
+              <option value="week">На неделе</option>
+              <option value="overdue">Просрочено</option>
+              <option value="completed">Завершено</option>
+              <option value="with_balance">С остатком оплаты</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Сортировка</span>
+            <select id="sortBySelect">
+              <option value="objectDate">По дате объекта</option>
+              <option value="createdAt">По дате создания</option>
+              <option value="clientName">По имени</option>
+              <option value="cost">По сумме</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Порядок</span>
+            <select id="sortDirSelect">
+              <option value="asc">По возрастанию</option>
+              <option value="desc">По убыванию</option>
+            </select>
+          </label>
+          <div class="field">
+            <span>Режим</span>
+            <div class="view-switch">
+              <button id="tableViewBtn" class="btn btn-toggle" type="button">Таблица</button>
+              <button id="cardsViewBtn" class="btn btn-toggle" type="button">Карточки</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel actions-panel">
+        <div class="panel-head"><h2>Быстрые действия</h2></div>
+        <div class="quick-actions">
+          <button id="exportPhonesBtn" class="btn btn-ghost" type="button">Экспорт телефонов</button>
+          <button id="exportCallListBtn" class="btn btn-ghost" type="button">Экспорт обзвонного списка</button>
+          <button id="exportFullCsvBtn" class="btn btn-ghost" type="button">Полный CSV</button>
+          <button id="exportJsonBtn" class="btn btn-ghost" type="button">Экспорт JSON</button>
+          <button id="importJsonBtn" class="btn btn-ghost" type="button">Импорт JSON</button>
+          <input id="jsonFileInput" type="file" accept="application/json" class="hidden">
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel list-panel">
+          <div class="panel-head">
+            <h2>Список заявок</h2>
+            <p id="resultsInfo" class="muted"></p>
+          </div>
+          <div id="tableWrap" class="table-wrap">
+            <table class="crm-table">
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Контакт / адрес</th>
+                  <th>Услуга</th>
+                  <th>Дата / время</th>
+                  <th>Статус</th>
+                  <th>Назначения</th>
+                  <th>Оплата</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="requestsTableBody"></tbody>
+            </table>
+          </div>
+          <div id="cardsWrap" class="cards-wrap hidden"></div>
+        </article>
+
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="formTitle">Новая заявка</h2></div>
+          <form id="requestForm">
+            <input id="requestIdInput" type="hidden">
+            <div class="form-grid">
+              <label class="field"><span>Имя клиента *</span><input id="clientNameInput" type="text" required></label>
+              <label class="field"><span>Телефон *</span><input id="phoneInput" type="tel" required></label>
+              <label class="field"><span>Источник</span>
+                <select id="sourceInput">
+                  <option value="">Не указан</option>
+                  <option value="avito">Avito</option>
+                  <option value="website">Сайт</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="repeat">Повторный клиент</option>
+                  <option value="referral">Рекомендация</option>
+                  <option value="other">Другое</option>
+                  <option value="online_booking">Онлайн-бронирование</option>
+                </select>
+              </label>
+              <label class="field"><span>Метки клиента</span><input id="tagsInput" type="text" placeholder="через запятую"></label>
+
+              <label class="field"><span>Зона / поселок</span><select id="settlementInput"></select></label>
+              <label class="field"><span>Улица / ориентир</span><input id="streetInput" type="text"></label>
+              <label class="field"><span>Дом / участок</span><input id="houseInput" type="text"></label>
+              <label class="field"><span>Адрес (старое поле)</span><input id="addressInput" type="text"></label>
+
+              <label class="field"><span>Услуга</span><select id="serviceInput"><option value="">Не выбрано</option></select></label>
+              <label class="field"><span>Вид работ</span><input id="workTypeInput" type="text"></label>
+              <label class="field"><span>Дата объекта</span><input id="objectDateInput" type="date"></label>
+              <label class="field"><span>Статус</span>
+                <select id="statusInput">
+                  <option value="new">Новая</option>
+                  <option value="confirmed">Подтверждена</option>
+                  <option value="in_work">В работе</option>
+                  <option value="completed">Завершена</option>
+                  <option value="canceled">Отменена</option>
+                </select>
+              </label>
+
+              <label class="field"><span>Время начала</span><input id="startTimeInput" type="time"></label>
+              <label class="field"><span>Длительность (ч)</span><input id="durationHoursInput" type="number" min="0.5" step="0.5"></label>
+              <label class="field"><span>Время окончания</span><input id="endTimeInput" type="time" readonly></label>
+              <label class="field"><span>Желаемый слот</span><input id="desiredTimeInput" type="text" placeholder="Напр. 10:00-12:00"></label>
+
+              <label class="field"><span>Назначенный сотрудник</span><select id="assignedEmployeeInput"><option value="">Не назначен</option></select></label>
+              <label class="field"><span>Назначенная техника</span><select id="assignedMachinesInput" multiple size="4"></select></label>
+              <label class="field"><span>Экипаж</span><select id="crewEmployeesInput" multiple size="4"></select></label>
+              <label class="field"><span>Реком. тип</span><input id="recommendedTypeInput" type="text" readonly></label>
+
+              <label class="field"><span>Стоимость</span><input id="costInput" type="number" step="0.01" min="0"></label>
+              <label class="field"><span>Предоплата</span><input id="prepaymentInput" type="number" step="0.01" min="0"></label>
+              <label class="field"><span>Остаток</span><input id="balanceInput" type="text" readonly></label>
+              <label class="field"><span>Статус оплаты</span><input id="paymentStatusInput" type="text" readonly></label>
+              <label class="field"><span>Способ оплаты</span>
+                <select id="paymentMethodInput">
+                  <option value="">Не указан</option>
+                  <option value="cash">Наличные</option>
+                  <option value="card">Карта</option>
+                  <option value="transfer">Перевод</option>
+                  <option value="link">Онлайн-ссылка</option>
+                </select>
+              </label>
+              <label class="field"><span>Ссылка на оплату</span><input id="paymentLinkInput" type="url" placeholder="https://pay.example/..." readonly></label>
+              <label class="field"><span>Дата оплаты</span><input id="paymentDateInput" type="date"></label>
+              <div class="field">
+                <span>Платежные действия</span>
+                <div class="mini-actions">
+                  <button id="generatePaymentLinkBtn" class="btn btn-ghost" type="button">Сформировать ссылку</button>
+                  <button id="markPaidBtn" class="btn btn-ghost" type="button">Отметить оплачено</button>
+                </div>
+              </div>
+
+              <label class="field"><span>Примечание диспетчера</span><input id="dispatcherNoteInput" type="text"></label>
+              <label class="field field-full"><span>Комментарий клиента</span><textarea id="commentInput" rows="3"></textarea></label>
+              <label class="field field-full"><span>Внутренний комментарий</span><textarea id="internalCommentInput" rows="3"></textarea></label>
+            </div>
+
+            <div id="assignmentHints" class="hint-stack"></div>
+            <div id="conflictBox" class="conflict-box hidden"></div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Сохранить</button>
+              <button id="resetFormBtn" class="btn btn-ghost" type="button">Сбросить</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="clients" id="screenClients">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel list-panel">
+          <div class="panel-head">
+            <h2>Клиенты</h2>
+            <p id="clientsInfo" class="muted"></p>
+          </div>
+          <div class="filters-inline">
+            <select id="clientSegmentFilter">
+              <option value="all">Все клиенты</option>
+              <option value="new">Новые</option>
+              <option value="repeat">Повторные</option>
+              <option value="debt">С долгом</option>
+              <option value="inactive">Давно не обращались</option>
+              <option value="seasonal">Сезонные</option>
+            </select>
+            <select id="clientSourceFilter"><option value="all">Все источники</option></select>
+            <select id="clientSettlementFilter"><option value="all">Все поселки</option></select>
+            <select id="clientServiceFilter"><option value="all">Все услуги</option></select>
+          </div>
+          <div class="table-wrap">
+            <table class="crm-table compact-table">
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Телефон</th>
+                  <th>Источник</th>
+                  <th>История</th>
+                  <th>Сегмент</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="clientsTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="clientFormTitle">Новый клиент</h2></div>
+          <form id="clientForm">
+            <input id="clientIdInput" type="hidden">
+            <div class="form-grid two-col">
+              <label class="field"><span>Имя *</span><input id="clientFullNameInput" type="text" required></label>
+              <label class="field"><span>Телефон *</span><input id="clientPhoneInput" type="tel" required></label>
+              <label class="field"><span>Источник</span><input id="clientSourceInput" type="text"></label>
+              <label class="field"><span>Метки / рейтинг</span><input id="clientTagsInput" type="text" placeholder="VIP, теплый, 5/5"></label>
+              <label class="field field-full"><span>Адрес</span><input id="clientAddressInput" type="text"></label>
+              <label class="field field-full"><span>Внутренние заметки</span><textarea id="clientCommentInput" rows="3"></textarea></label>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Сохранить</button>
+              <button id="resetClientFormBtn" class="btn btn-ghost" type="button">Сбросить</button>
+            </div>
+          </form>
+
+          <div class="client-history" id="clientHistoryCard">
+            <h3>История клиента</h3>
+            <div id="clientHistoryContent" class="analytics-list"></div>
+          </div>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="machines" id="screenMachines">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel list-panel">
+          <div class="panel-head"><h2>Техника</h2><p id="machinesInfo" class="muted"></p></div>
+          <div class="table-wrap">
+            <table class="crm-table compact-table">
+              <thead>
+                <tr>
+                  <th>Название</th><th>Тип</th><th>Номера</th><th>Статус</th><th>Ставка</th><th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="machinesTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="machineFormTitle">Новая техника</h2></div>
+          <form id="machineForm">
+            <input id="machineIdInput" type="hidden">
+            <div class="form-grid two-col">
+              <label class="field"><span>Название *</span><input id="machineNameInput" type="text" required></label>
+              <label class="field"><span>Тип *</span><select id="machineTypeInput"><option value="погрузчик">Погрузчик</option><option value="экскаватор">Экскаватор</option><option value="мини-трактор">Мини-трактор</option><option value="самосвал">Самосвал</option></select></label>
+              <label class="field"><span>Внутренний номер</span><input id="machineInternalInput" type="text"></label>
+              <label class="field"><span>Госномер</span><input id="machinePlateInput" type="text"></label>
+              <label class="field"><span>Статус</span><select id="machineStatusInput"><option value="free">Свободна</option><option value="busy">Занята</option><option value="repair">Ремонт</option><option value="offline">Недоступна</option></select></label>
+              <label class="field"><span>Ставка/час</span><input id="machineRateInput" type="number" step="0.01" min="0"></label>
+              <label class="field"><span>Мин. выезд</span><input id="machineMinCallInput" type="number" step="0.5" min="0"></label>
+              <label class="field"><span>Машинист по умолчанию</span><select id="machineDefaultEmployeeInput"><option value="">Не назначен</option></select></label>
+              <label class="field field-full"><span>Зоны работы</span><input id="machineZonesInput" type="text" placeholder="через запятую"></label>
+              <label class="field field-full"><span>Комментарий</span><textarea id="machineCommentInput" rows="3"></textarea></label>
+              <label class="check-field field-full"><input id="machineActiveInput" type="checkbox" checked><span>Активна</span></label>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><button id="resetMachineFormBtn" class="btn btn-ghost" type="button">Сбросить</button></div>
+          </form>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="employees" id="screenEmployees">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel list-panel">
+          <div class="panel-head"><h2>Сотрудники</h2><p id="employeesInfo" class="muted"></p></div>
+          <div class="table-wrap">
+            <table class="crm-table compact-table">
+              <thead><tr><th>ФИО</th><th>Телефон</th><th>Роль</th><th>Навыки</th><th>Статус</th><th>Действия</th></tr></thead>
+              <tbody id="employeesTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="employeeFormTitle">Новый сотрудник</h2></div>
+          <form id="employeeForm">
+            <input id="employeeIdInput" type="hidden">
+            <div class="form-grid two-col">
+              <label class="field"><span>ФИО *</span><input id="employeeNameInput" type="text" required></label>
+              <label class="field"><span>Телефон *</span><input id="employeePhoneInput" type="tel" required></label>
+              <label class="field"><span>Роль</span><input id="employeeRoleInput" type="text"></label>
+              <label class="field"><span>Ставка</span><input id="employeeRateInput" type="number" step="0.01" min="0"></label>
+              <label class="field field-full"><span>Типы техники</span><input id="employeeMachineTypesInput" type="text" placeholder="через запятую"></label>
+              <label class="field"><span>График</span><input id="employeeScheduleInput" type="text" placeholder="09:00-18:00"></label>
+              <label class="field"><span>Выходные</span><input id="employeeDaysOffInput" type="text" placeholder="сб,вс"></label>
+              <label class="field"><span>Статус</span><select id="employeeStatusInput"><option value="active">Активен</option><option value="dayoff">Выходной</option><option value="unavailable">Недоступен</option></select></label>
+              <label class="field field-full"><span>Комментарий</span><textarea id="employeeCommentInput" rows="3"></textarea></label>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><button id="resetEmployeeFormBtn" class="btn btn-ghost" type="button">Сбросить</button></div>
+          </form>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="services" id="screenServices">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel list-panel">
+          <div class="panel-head"><h2>Справочник услуг</h2><p id="servicesInfo" class="muted"></p></div>
+          <div class="table-wrap">
+            <table class="crm-table compact-table">
+              <thead><tr><th>Услуга</th><th>Тип техники</th><th>Мин. цена</th><th>Мин. время</th><th>Связанные услуги</th><th>Действия</th></tr></thead>
+              <tbody id="servicesTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="serviceFormTitle">Новая услуга</h2></div>
+          <form id="serviceForm">
+            <input id="serviceIdInput" type="hidden">
+            <div class="form-grid two-col">
+              <label class="field"><span>Название *</span><input id="serviceNameInput" type="text" required></label>
+              <label class="field"><span>Реком. тип</span><select id="serviceMachineTypeInput"><option value="">Не указан</option><option value="погрузчик">Погрузчик</option><option value="экскаватор">Экскаватор</option><option value="мини-трактор">Мини-трактор</option><option value="самосвал">Самосвал</option></select></label>
+              <label class="field"><span>Мин. цена</span><input id="serviceMinPriceInput" type="number" step="0.01" min="0"></label>
+              <label class="field"><span>Мин. время (ч)</span><input id="serviceMinHoursInput" type="number" step="0.5" min="0"></label>
+              <label class="field"><span>Сезонность</span><input id="serviceSeasonalityInput" type="text" placeholder="зима / круглый год"></label>
+              <label class="check-field"><input id="serviceExtraMachineInput" type="checkbox"><span>Нужна доп. техника</span></label>
+              <label class="field field-full"><span>Связанные услуги (допродажа)</span><input id="serviceRelatedInput" type="text" placeholder="через запятую"></label>
+              <label class="field field-full"><span>Описание</span><textarea id="serviceDescriptionInput" rows="3"></textarea></label>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><button id="resetServiceFormBtn" class="btn btn-ghost" type="button">Сбросить</button></div>
+          </form>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="zones" id="screenZones">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel list-panel">
+          <div class="panel-head"><h2>Поселки / зоны</h2><p id="zonesInfo" class="muted"></p></div>
+          <div class="table-wrap">
+            <table class="crm-table compact-table">
+              <thead><tr><th>Название</th><th>Активность</th><th>Онлайн-бронирование</th><th>Надбавка</th><th>Действия</th></tr></thead>
+              <tbody id="zonesTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+        <aside class="panel form-panel">
+          <div class="panel-head"><h2 id="zoneFormTitle">Новая зона</h2></div>
+          <form id="zoneForm">
+            <input id="zoneIdInput" type="hidden">
+            <div class="form-grid two-col">
+              <label class="field"><span>Название *</span><input id="zoneNameInput" type="text" required></label>
+              <label class="field"><span>Надбавка к цене</span><input id="zoneMarkupInput" type="number" step="0.01" min="0"></label>
+              <label class="check-field"><input id="zoneActiveInput" type="checkbox" checked><span>Активна</span></label>
+              <label class="check-field"><input id="zoneOnlineInput" type="checkbox" checked><span>Доступна онлайн</span></label>
+              <label class="field field-full"><span>Комментарий</span><textarea id="zoneCommentInput" rows="3"></textarea></label>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><button id="resetZoneFormBtn" class="btn btn-ghost" type="button">Сбросить</button></div>
+          </form>
+        </aside>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="calendar" id="screenCalendar">
+      <section class="panel">
+        <div class="panel-head"><h2>Планировщик</h2></div>
+        <div class="calendar-controls">
+          <label class="field"><span>Дата</span><input id="calendarDateInput" type="date"></label>
+          <label class="field"><span>Период</span><select id="calendarRangeInput"><option value="day">День</option><option value="week">Неделя</option></select></label>
+          <label class="field"><span>Представление</span><select id="calendarModeInput"><option value="list">Список по дням</option><option value="machines">По технике</option></select></label>
+        </div>
+      </section>
+      <section class="panel" id="calendarListPanel"><div class="panel-head"><h2>Список по дням</h2></div><div id="calendarListView" class="calendar-list-view"></div></section>
+      <section class="panel hidden" id="calendarMachinePanel"><div class="panel-head"><h2>План по технике</h2></div><div id="calendarMachineView" class="calendar-machine-view"></div></section>
+    </section>
+
+        <section class="screen" data-screen="booking" id="screenBooking">
+      <section class="panel booking-shell">
+        <div class="booking-shell-head">
+          <div>
+            <h2>Заказать услуги спецтехники</h2>
+            <p class="muted">Выберите поселок, вид работ, дату и оставьте заявку</p>
+          </div>
+          <button class="icon-btn booking-close" type="button" aria-label="Закрыть">x</button>
+        </div>
+        <div class="booking-shell-grid">
+          <article class="booking-shell-form">
+            <form id="bookingForm">
+              <div class="form-grid two-col booking-grid">
+                <label class="field"><span>Поселок *</span><select id="bookingZoneInput" required><option value="">Выберите</option></select></label>
+                <label class="field"><span>Вид работы *</span><select id="bookingServiceInput" required><option value="">Выберите</option></select></label>
+
+                <label class="field field-full"><span>Адрес</span>
+                  <div class="address-row">
+                    <input id="bookingStreetInput" type="text" placeholder="Улица / ориентир" required>
+                    <input id="bookingHouseInput" type="text" placeholder="Дом / участок" required>
+                  </div>
+                </label>
+
+                <label class="field"><span>Дата *</span><input id="bookingDateInput" type="date" required></label>
+                <label class="field"><span>Время *</span><select id="bookingSlotInput" required><option value="">Выберите</option></select></label>
+
+                <label class="field"><span>Ваше имя *</span><input id="bookingNameInput" type="text" placeholder="Например: Иван" required></label>
+                <label class="field"><span>Телефон *</span><input id="bookingPhoneInput" type="tel" placeholder="+7 999 123-45-67" required></label>
+
+                <label class="field field-full"><span>Комментарий</span><textarea id="bookingCommentInput" rows="3" placeholder="Например: что нужно сделать, проезд к участку..."></textarea></label>
+              </div>
+
+              <div class="booking-footer">
+                <p class="booking-policy">Оставляя заявку, вы соглашаетесь с обработкой персональных данных.</p>
+                <div class="booking-inline-price" id="bookingPricePreview"></div>
+                <div class="form-actions booking-actions"><button class="btn btn-primary booking-submit" type="submit">Оставить заявку</button></div>
+              </div>
+            </form>
+          </article>
+
+          <aside class="booking-shell-side">
+            <div class="booking-calendar-card">
+              <h3 id="bookingCalendarTitle">Доступность</h3>
+              <div id="bookingAvailability" class="booking-availability"></div>
+              <div id="bookingCalendarMini" class="booking-mini-calendar"></div>
+              <div class="booking-legend">
+                <span><i class="legend-dot free"></i>Свободно</span>
+                <span><i class="legend-dot limited"></i>Ограниченно</span>
+                <span><i class="legend-dot busy"></i>Занято</span>
+              </div>
+            </div>
+            <div class="booking-estimate-card">
+              <h3>Предварительный расчет</h3>
+              <div id="bookingZonesStatus" class="analytics-list"></div>
+              <div id="bookingSummaryList" class="booking-summary-list"></div>
+              <div id="bookingTotalPreview" class="booking-total">Итого: —</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </section>
+
+    <section class="screen" data-screen="campaigns" id="screenCampaigns">
+      <section class="workspace-grid secondary-grid">
+        <article class="panel form-panel">
+          <div class="panel-head"><h2>Модуль рассылок</h2></div>
+          <div class="filters-grid">
+            <label class="field"><span>Сегмент</span><select id="campaignSegmentInput"></select></label>
+            <label class="field"><span>Источник</span><select id="campaignSourceInput"><option value="all">Все</option></select></label>
+            <label class="field"><span>Поселок</span><select id="campaignSettlementInput"><option value="all">Все</option></select></label>
+            <label class="field"><span>Услуга</span><select id="campaignServiceInput"><option value="all">Все</option></select></label>
+            <label class="field field-full"><span>Шаблон</span><select id="campaignTemplateInput"></select></label>
+            <label class="field field-full"><span>Текст сообщения</span><textarea id="campaignMessageInput" rows="5"></textarea></label>
+          </div>
+
+          <div class="form-actions">
+            <button id="campaignPreviewBtn" class="btn btn-ghost" type="button">Обновить предпросмотр</button>
+            <button id="campaignCopyPhonesBtn" class="btn btn-ghost" type="button">Скопировать телефоны</button>
+            <button id="campaignExportCsvBtn" class="btn btn-ghost" type="button">Экспорт CSV</button>
+            <button id="campaignPrepareChannelBtn" class="btn btn-ghost" type="button">Подготовить текст WA/TG/SMS</button>
+          </div>
+
+          <div class="campaign-preview">
+            <h3>Предпросмотр персонализации</h3>
+            <div id="campaignPreviewBox" class="hint-stack"></div>
+          </div>
+        </article>
+
+        <aside class="panel">
+          <div class="panel-head"><h2>Получатели</h2><p id="campaignRecipientsInfo" class="muted"></p></div>
+          <div id="campaignRecipientsList" class="analytics-list"></div>
+        </aside>
+      </section>
+    </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
