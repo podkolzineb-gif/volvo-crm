@@ -11,7 +11,7 @@
     <div class="app-shell">
     <header class="topbar">
       <div class="brand-block">
-        <div class="brand-logo">CRM</div>
+        <div class="brand-logo">&#9711;</div>
         <strong class="brand-title">CRM</strong>
         <span class="brand-caret">v</span>
       </div>
@@ -20,10 +20,10 @@
           <span class="icon-glyph">+</span>
         </button>
         <button id="notifyPermissionBtn" class="icon-btn top-action-btn notify-icon-btn" type="button" aria-label="Уведомления">
-          <span class="icon-glyph">!</span>
+          <span class="icon-glyph">&#128276;</span>
         </button>
         <button class="icon-btn top-action-btn" type="button" aria-label="Сообщения">
-          <span class="icon-glyph">...</span>
+          <span class="icon-glyph">&#128172;</span>
           <span class="icon-badge">2</span>
         </button>
         <button class="avatar-chip" type="button" aria-label="Профиль">
@@ -31,7 +31,7 @@
           <span>Андрей</span>
         </button>
         <button id="mobileNavToggle" class="icon-btn mobile-nav-toggle" type="button" aria-label="Открыть меню">
-          <span class="icon-glyph">=</span>
+          <span class="icon-glyph">&#9776;</span>
         </button>
       </div>
     </header>
@@ -82,9 +82,9 @@
           <div class="panel-head">
             <h2>Календарь работ</h2>
             <div class="dashboard-calendar-toolbar">
-              <button class="icon-btn icon-btn-sm" type="button" aria-label="Предыдущий период" disabled><</button>
+              <button class="icon-btn icon-btn-sm" type="button" aria-label="Предыдущий период" disabled>&lt;</button>
               <p class="muted" id="dashboardCalendarMonth">Текущий месяц</p>
-              <button class="icon-btn icon-btn-sm" type="button" aria-label="Следующий период" disabled>></button>
+              <button class="icon-btn icon-btn-sm" type="button" aria-label="Следующий период" disabled>&gt;</button>
             </div>
           </div>
           <div class="dashboard-weekdays">
@@ -240,6 +240,8 @@
       <section class="panel actions-panel">
         <div class="panel-head"><h2>Быстрые действия</h2></div>
         <div class="quick-actions">
+          <button id="syncRemoteBtn" class="btn btn-primary" type="button">Синхронизировать с backend</button>
+          <button id="setRemoteApiBtn" class="btn btn-ghost" type="button">Настроить API endpoint</button>
           <button id="exportPhonesBtn" class="btn btn-ghost" type="button">Экспорт телефонов</button>
           <button id="exportCallListBtn" class="btn btn-ghost" type="button">Экспорт обзвонного списка</button>
           <button id="exportFullCsvBtn" class="btn btn-ghost" type="button">Полный CSV</button>
@@ -247,6 +249,7 @@
           <button id="importJsonBtn" class="btn btn-ghost" type="button">Импорт JSON</button>
           <input id="jsonFileInput" type="file" accept="application/json" class="hidden">
         </div>
+        <p id="remoteSyncInfo" class="muted remote-sync-info">Синхронизация еще не выполнялась.</p>
       </section>
 
       <section class="workspace-grid">

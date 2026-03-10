@@ -15,7 +15,8 @@
     marketingTasks: 'tractor_crm_marketing_tasks_v1',
     ui: 'tractor_crm_ui_state_v2',
     sentNotifications: 'tractor_crm_sent_notifications_v2',
-    inAppNotifications: 'tractor_crm_in_app_notifications_v2'
+    inAppNotifications: 'tractor_crm_in_app_notifications_v2',
+    remote: 'tractor_crm_remote_state_v1'
   };
 
   const REQUEST_STATUS_LABELS = {
@@ -54,7 +55,10 @@
     repeat: 'Повторный клиент',
     referral: 'Рекомендация',
     other: 'Другое',
-    online_booking: 'Онлайн-бронирование'
+    online_booking: 'Онлайн-бронирование',
+    landing: 'Лендинг',
+    wfolio: 'Wfolio',
+    booking_form: 'Форма бронирования'
   };
 
   const SOURCE_OPTIONS = [
@@ -66,7 +70,10 @@
     { value: 'repeat', label: 'Повторный клиент' },
     { value: 'referral', label: 'Рекомендация' },
     { value: 'other', label: 'Другое' },
-    { value: 'online_booking', label: 'Онлайн-бронирование' }
+    { value: 'online_booking', label: 'Онлайн-бронирование' },
+    { value: 'landing', label: 'Лендинг' },
+    { value: 'wfolio', label: 'Wfolio' },
+    { value: 'booking_form', label: 'Форма бронирования' }
   ];
 
   const MACHINE_TYPES = ['погрузчик', 'экскаватор', 'мини-трактор', 'самосвал'];
@@ -199,6 +206,17 @@
     { id: 'zone_3', name: 'Южный', isActive: true, onlineEnabled: false, markup: 1800, comment: 'Только через диспетчера' }
   ];
 
+
+  function getDefaultRemoteState() {
+    return {
+      apiBaseUrl: 'http://localhost:8787',
+      enabled: true,
+      pollMs: 30000,
+      lastSyncAt: '',
+      lastError: '',
+      readToken: ''
+    };
+  }
   function getDefaultUIState() {
     return {
       activeScreen: 'dashboard',
@@ -248,6 +266,7 @@
     ui: getDefaultUIState(),
     sentNotificationKeys: new Set(),
     inAppNotifications: [],
+    remote: getDefaultRemoteState(),
     editors: {
       request: 'create',
       client: 'create',
@@ -259,6 +278,7 @@
   };
 
   const els = {};
+  let remoteSyncTimer = null;
 
   // ================================
   // Init
@@ -270,11 +290,14 @@
     loadState();
     bindEvents();
     renderAll();
+    syncRequestsFromRemote({ silent: true });
+    startRemoteSyncLoop();
     runReminderScan();
     setInterval(runReminderScan, 60 * 1000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         runReminderScan();
+        syncRequestsFromRemote({ silent: true });
       }
     });
   }
@@ -282,6 +305,7 @@
   function cacheElements() {
     const ids = [
       'mainNav', 'mobileNavToggle',
+      'syncRemoteBtn', 'setRemoteApiBtn', 'remoteSyncInfo',
       'newRequestBtn', 'notifyPermissionBtn',
       'inAppNoticeBox', 'noticeList', 'clearNoticesBtn',
 
@@ -368,6 +392,7 @@
 
     state.sentNotificationKeys = new Set(loadArray(STORAGE_KEYS.sentNotifications));
     state.inAppNotifications = loadArray(STORAGE_KEYS.inAppNotifications).slice(0, 30);
+    state.remote = normalizeRemoteState(safeParseJson(localStorage.getItem(STORAGE_KEYS.remote), {}));
 
     migrateLegacyDataIfNeeded();
     resetAllForms();
@@ -394,7 +419,24 @@
   function saveUIState() { localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify(state.ui)); }
   function saveSentNotificationKeys() { localStorage.setItem(STORAGE_KEYS.sentNotifications, JSON.stringify([...state.sentNotificationKeys])); }
   function saveInAppNotifications() { localStorage.setItem(STORAGE_KEYS.inAppNotifications, JSON.stringify(state.inAppNotifications.slice(0, 30))); }
+  function saveRemoteState() { localStorage.setItem(STORAGE_KEYS.remote, JSON.stringify(state.remote)); }
 
+
+  function normalizeRemoteState(raw) {
+    const defaults = getDefaultRemoteState();
+    const source = raw && typeof raw === 'object' ? raw : {};
+
+    const pollMs = Math.max(10000, Math.min(300000, Number(source.pollMs) || defaults.pollMs));
+
+    return {
+      apiBaseUrl: normalizeApiBaseUrl(source.apiBaseUrl || defaults.apiBaseUrl),
+      enabled: toBoolean(source.enabled, defaults.enabled),
+      pollMs,
+      lastSyncAt: sanitizeString(source.lastSyncAt),
+      lastError: sanitizeString(source.lastError),
+      readToken: sanitizeString(source.readToken)
+    };
+  }
   function normalizeUIState(raw) {
     const defaults = getDefaultUIState();
     const normalized = {
@@ -436,6 +478,39 @@
     return String(value ?? '').trim();
   }
 
+
+  function normalizeApiBaseUrl(value) {
+    const raw = sanitizeString(value);
+    if (!raw) return getDefaultRemoteState().apiBaseUrl;
+
+    let normalized = raw.replace(/\/+$/, '');
+    normalized = normalized.replace(/\/api\/requests$/i, '');
+    normalized = normalized.replace(/\/api\/(booking|leads\/create)$/i, '');
+    normalized = normalized.replace(/\/api$/i, '');
+
+    return normalized;
+  }
+
+  function normalizePhoneForCompare(value) {
+    const digits = String(value ?? '').replace(/\D+/g, '');
+    if (!digits) return '';
+    if (digits.length === 11 && digits.startsWith('8')) return `7${digits.slice(1)}`;
+    if (digits.length === 10) return `7${digits}`;
+    return digits;
+  }
+
+  function formatDateTime(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  }
   function normalizeNumber(value) {
     const prepared = String(value ?? '')
       .replace(',', '.')
@@ -691,6 +766,18 @@
       clientName: sanitizeString(source.clientName || source.name),
       phone: sanitizeString(source.phone),
       source: sanitizeString(source.source),
+      channel: sanitizeString(source.channel),
+      sourcePage: sanitizeString(source.sourcePage),
+      landingId: sanitizeString(source.landingId),
+      utmSource: sanitizeString(source.utmSource || source.utm_source),
+      utmMedium: sanitizeString(source.utmMedium || source.utm_medium),
+      utmCampaign: sanitizeString(source.utmCampaign || source.utm_campaign),
+      utmContent: sanitizeString(source.utmContent || source.utm_content),
+      utmTerm: sanitizeString(source.utmTerm || source.utm_term),
+      referrer: sanitizeString(source.referrer),
+      createdFrom: sanitizeString(source.createdFrom),
+      bookingOrigin: sanitizeString(source.bookingOrigin),
+      externalId: sanitizeString(source.externalId),
       tags: normalizeTags(source.tags),
 
       zoneId,
@@ -723,10 +810,11 @@
       crewEmployeeIds: normalizeIdArray(source.crewEmployeeIds || source.crewIds),
 
       comment: sanitizeString(source.comment),
-      internalComment: sanitizeString(source.internalComment),
+      internalComment: sanitizeString(source.internalComment || source.internalNotes),
+      internalNotes: sanitizeString(source.internalNotes || source.internalComment),
       dispatcherNote: sanitizeString(source.dispatcherNote),
 
-      onlineBooking: toBoolean(source.onlineBooking, source.source === 'online_booking')
+      onlineBooking: toBoolean(source.onlineBooking, source.source === 'online_booking' || source.createdFrom === 'wfolio')
     };
   }
 
@@ -741,6 +829,18 @@
       name: sanitizeString(source.name || source.fullName || source.clientName),
       phone: sanitizeString(source.phone),
       source: sanitizeString(source.source),
+      channel: sanitizeString(source.channel),
+      sourcePage: sanitizeString(source.sourcePage),
+      landingId: sanitizeString(source.landingId),
+      utmSource: sanitizeString(source.utmSource || source.utm_source),
+      utmMedium: sanitizeString(source.utmMedium || source.utm_medium),
+      utmCampaign: sanitizeString(source.utmCampaign || source.utm_campaign),
+      utmContent: sanitizeString(source.utmContent || source.utm_content),
+      utmTerm: sanitizeString(source.utmTerm || source.utm_term),
+      referrer: sanitizeString(source.referrer),
+      createdFrom: sanitizeString(source.createdFrom),
+      bookingOrigin: sanitizeString(source.bookingOrigin),
+      externalId: sanitizeString(source.externalId),
       tags: normalizeTags(source.tags),
       address: sanitizeString(source.address),
       comment: sanitizeString(source.comment),
@@ -852,6 +952,24 @@
 
   function sourceLabel(value) {
     return SOURCE_LABELS[value] || value || 'Не указан';
+  }
+
+  function getRequestSourceBadgeLabel(request) {
+    if (!request) return 'Не указан';
+    if (request.channel === 'wfolio' || request.createdFrom === 'wfolio') return 'Wfolio / Landing';
+    return sourceLabel(request.source);
+  }
+
+  function getRequestSourceBadgeClass(request) {
+    if (!request) return 'badge-new';
+    if (request.channel === 'wfolio' || request.createdFrom === 'wfolio') return 'badge-online';
+    if (request.source === 'online_booking') return 'badge-online';
+    if (request.source === 'landing' || request.source === 'website') return 'badge-active';
+    return 'badge-new';
+  }
+
+  function renderRequestSourceBadge(request) {
+    return `<span class="badge ${escapeHtml(getRequestSourceBadgeClass(request))}">${escapeHtml(getRequestSourceBadgeLabel(request))}</span>`;
   }
 
   // ================================
@@ -1253,6 +1371,15 @@
         ...existing,
         name: request.clientName || existing.name,
         source: request.source || existing.source,
+        channel: request.channel || existing.channel || '',
+        sourcePage: request.sourcePage || existing.sourcePage || '',
+        landingId: request.landingId || existing.landingId || '',
+        utmSource: request.utmSource || existing.utmSource || '',
+        utmMedium: request.utmMedium || existing.utmMedium || '',
+        utmCampaign: request.utmCampaign || existing.utmCampaign || '',
+        utmContent: request.utmContent || existing.utmContent || '',
+        utmTerm: request.utmTerm || existing.utmTerm || '',
+        referrer: request.referrer || existing.referrer || '',
         tags: uniqueValues([...(existing.tags || []), ...normalizeTags(request.tags)]),
         address: address || existing.address,
         updatedAt: new Date().toISOString()
@@ -1262,6 +1389,15 @@
         name: request.clientName,
         phone,
         source: request.source,
+        channel: request.channel || '',
+        sourcePage: request.sourcePage || '',
+        landingId: request.landingId || '',
+        utmSource: request.utmSource || '',
+        utmMedium: request.utmMedium || '',
+        utmCampaign: request.utmCampaign || '',
+        utmContent: request.utmContent || '',
+        utmTerm: request.utmTerm || '',
+        referrer: request.referrer || '',
         tags: normalizeTags(request.tags),
         address,
         comment: '',
@@ -1538,6 +1674,217 @@
       .sort((a, b) => (b.aggregate.requestsCount - a.aggregate.requestsCount) || a.client.name.localeCompare(b.client.name, 'ru'));
   }
 
+
+  // ================================
+  // Remote integration (Wfolio / Landing)
+  // ================================
+  function renderRemoteSyncStatus() {
+    if (!els.remoteSyncInfo) return;
+
+    const parts = [`API: ${state.remote.apiBaseUrl || '-'}`];
+    if (state.remote.lastSyncAt) {
+      parts.push(`Синхронизировано: ${formatDateTime(state.remote.lastSyncAt)}`);
+    } else {
+      parts.push('Синхронизация еще не выполнялась');
+    }
+
+    if (state.remote.lastError) {
+      parts.push(`Ошибка: ${state.remote.lastError}`);
+      els.remoteSyncInfo.classList.add('error');
+    } else {
+      els.remoteSyncInfo.classList.remove('error');
+    }
+
+    els.remoteSyncInfo.textContent = parts.join(' · ');
+  }
+
+  function buildRemoteHeaders() {
+    const headers = { Accept: 'application/json' };
+    if (state.remote.readToken) {
+      headers['X-API-Key'] = state.remote.readToken;
+    }
+    return headers;
+  }
+
+  function isRemoteRequestNewer(existing, incoming) {
+    const existingTs = Date.parse(existing.updatedAt || existing.createdAt || '');
+    const incomingTs = Date.parse(incoming.updatedAt || incoming.createdAt || '');
+    if (!Number.isFinite(incomingTs)) return false;
+    if (!Number.isFinite(existingTs)) return true;
+    return incomingTs >= existingTs;
+  }
+
+  function isLikelySameRemoteRequest(existing, incoming) {
+    if (!existing || !incoming) return false;
+
+    const existingPhone = normalizePhoneForCompare(existing.phone);
+    const incomingPhone = normalizePhoneForCompare(incoming.phone);
+    if (!existingPhone || !incomingPhone || existingPhone !== incomingPhone) return false;
+
+    if ((existing.objectDate || '') !== (incoming.objectDate || '')) return false;
+
+    const existingWork = sanitizeString(existing.workType || '').toLowerCase();
+    const incomingWork = sanitizeString(incoming.workType || '').toLowerCase();
+    if (existingWork && incomingWork && existingWork !== incomingWork) return false;
+
+    const existingTime = sanitizeString(existing.desiredTime || `${existing.startTime}-${existing.endTime}`);
+    const incomingTime = sanitizeString(incoming.desiredTime || `${incoming.startTime}-${incoming.endTime}`);
+    if (existingTime && incomingTime && existingTime !== incomingTime) return false;
+
+    const existingTs = Date.parse(existing.createdAt || '');
+    const incomingTs = Date.parse(incoming.createdAt || '');
+    if (!Number.isFinite(existingTs) || !Number.isFinite(incomingTs)) return true;
+
+    const diffMinutes = Math.abs(incomingTs - existingTs) / (60 * 1000);
+    return diffMinutes <= 360;
+  }
+
+  function mergeRemoteRequests(remoteRequests) {
+    if (!Array.isArray(remoteRequests) || !remoteRequests.length) {
+      return { changed: false, newCount: 0, updatedCount: 0 };
+    }
+
+    const idToIndex = new Map(state.requests.map((request, index) => [request.id, index]));
+    const touched = [];
+    let newCount = 0;
+    let updatedCount = 0;
+
+    remoteRequests.forEach((item) => {
+      const normalized = normalizeRequest(item);
+
+      if (!normalized.source) normalized.source = 'landing';
+      if (!normalized.channel && (normalized.source === 'landing' || normalized.createdFrom === 'wfolio')) normalized.channel = 'wfolio';
+      if (!normalized.createdFrom && normalized.channel === 'wfolio') normalized.createdFrom = 'wfolio';
+      if (!normalized.bookingOrigin && normalized.createdFrom === 'wfolio') normalized.bookingOrigin = 'website_form';
+
+      const tags = new Set(normalizeTags(normalized.tags));
+      if (normalized.createdFrom === 'wfolio' || normalized.channel === 'wfolio') {
+        tags.add('wfolio');
+        tags.add('landing');
+      }
+      normalized.tags = [...tags];
+
+      const existingIndex = idToIndex.get(normalized.id);
+      if (existingIndex !== undefined) {
+        const existing = state.requests[existingIndex];
+        if (isRemoteRequestNewer(existing, normalized)) {
+          state.requests[existingIndex] = normalizeRequest({ ...existing, ...normalized });
+          touched.push(state.requests[existingIndex]);
+          updatedCount += 1;
+        }
+        return;
+      }
+
+      const duplicateIndex = state.requests.findIndex((request) => isLikelySameRemoteRequest(request, normalized));
+      if (duplicateIndex >= 0) {
+        const existing = state.requests[duplicateIndex];
+        state.requests[duplicateIndex] = normalizeRequest({
+          ...existing,
+          ...normalized,
+          id: existing.id,
+          externalId: normalized.id || existing.externalId
+        });
+        touched.push(state.requests[duplicateIndex]);
+        updatedCount += 1;
+        return;
+      }
+
+      state.requests.unshift(normalized);
+      touched.push(normalized);
+      newCount += 1;
+    });
+
+    const changed = newCount > 0 || updatedCount > 0;
+    if (!changed) return { changed: false, newCount, updatedCount };
+
+    saveRequests();
+    touched.forEach((request) => upsertClientFromRequest(request));
+
+    return { changed: true, newCount, updatedCount };
+  }
+
+  async function fetchRemoteRequests() {
+    const apiBaseUrl = normalizeApiBaseUrl(state.remote.apiBaseUrl);
+    const endpoint = `${apiBaseUrl}/api/requests`;
+    const params = new URLSearchParams({ limit: '2000' });
+
+    const response = await fetch(`${endpoint}?${params.toString()}`, {
+      method: 'GET',
+      headers: buildRemoteHeaders(),
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const requests = Array.isArray(payload?.requests)
+      ? payload.requests
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+    return requests;
+  }
+
+  async function syncRequestsFromRemote(options = {}) {
+    const { silent = false, manual = false } = options;
+
+    if (!state.remote.enabled) {
+      if (!silent) alert('Синхронизация отключена в настройках интеграции.');
+      return;
+    }
+
+    if (typeof fetch !== 'function') {
+      state.remote.lastError = 'Браузер не поддерживает fetch API.';
+      saveRemoteState();
+      renderRemoteSyncStatus();
+      if (!silent) alert(state.remote.lastError);
+      return;
+    }
+
+    try {
+      const remoteRequests = await fetchRemoteRequests();
+      const result = mergeRemoteRequests(remoteRequests.map(normalizeRequest));
+
+      state.remote.lastSyncAt = new Date().toISOString();
+      state.remote.lastError = '';
+      saveRemoteState();
+
+      if (result.changed) {
+        ensureMarketingTriggers();
+        renderAll();
+      } else {
+        renderRemoteSyncStatus();
+      }
+
+      if (manual) {
+        alert(`Синхронизация завершена. Новых: ${result.newCount}, обновлено: ${result.updatedCount}.`);
+      }
+    } catch (error) {
+      state.remote.lastError = sanitizeString(error?.message || 'Не удалось получить заявки с сервера.');
+      saveRemoteState();
+      renderRemoteSyncStatus();
+      if (!silent) {
+        alert(`Ошибка синхронизации: ${state.remote.lastError}`);
+      }
+    }
+  }
+
+  function startRemoteSyncLoop() {
+    if (remoteSyncTimer) {
+      clearInterval(remoteSyncTimer);
+      remoteSyncTimer = null;
+    }
+
+    if (!state.remote.enabled) return;
+
+    remoteSyncTimer = setInterval(() => {
+      syncRequestsFromRemote({ silent: true });
+    }, state.remote.pollMs);
+  }
   // ================================
   // Rendering
   // ================================
@@ -1549,6 +1896,7 @@
     renderSummary();
     renderRequestFiltersOptions();
     renderRequests();
+    renderRemoteSyncStatus();
     renderClients();
     renderMachines();
     renderEmployees();
@@ -1612,11 +1960,10 @@
   function renderSummary() {
     const today = startOfDay(new Date());
     const todayStr = toDateOnlyString(today);
-    const tomorrowStr = toDateOnlyString(addDays(today, 1));
     const weekEnd = addDays(today, 6);
 
-    const total = state.requests.length;
-    const inWorkCount = state.requests.filter((request) => ['confirmed', 'in_work'].includes(request.status)).length;
+    const newCount = state.requests.filter((request) => getEffectiveRequestStatus(request) === 'new').length;
+    const inWorkCount = state.requests.filter((request) => ['confirmed', 'in_work'].includes(getEffectiveRequestStatus(request))).length;
     const overdueCount = state.requests.filter(isRequestOverdue).length;
 
     const paidWeek = state.requests
@@ -2170,7 +2517,8 @@
         <tr class="${escapeHtml(rowClass)}">
           <td>
             <strong>${escapeHtml(request.clientName || 'Без имени')}</strong><br>
-            <span class="muted">${escapeHtml(sourceLabel(request.source))}</span>
+            ${renderRequestSourceBadge(request)}
+            ${request.channel ? `<div class="muted">Канал: ${escapeHtml(request.channel)}</div>` : ''}
           </td>
           <td>
             ${escapeHtml(request.phone || '-')}
@@ -2225,6 +2573,7 @@
             <div>
               <strong>${escapeHtml(request.clientName || 'Без имени')}</strong>
               <div class="muted">${escapeHtml(request.phone || '-')}</div>
+              <div>${renderRequestSourceBadge(request)}</div>
             </div>
             <div>${statusBadge}</div>
           </div>
@@ -2319,6 +2668,7 @@
       { label: 'Услуги', value: aggregate ? [...aggregate.services].join(', ') || '-' : '-' },
       { label: 'Последний заказ', value: aggregate?.lastDate ? formatDate(toDateOnlyString(aggregate.lastDate)) : '-' },
       { label: 'Источник', value: sourceLabel(client.source || (aggregate ? [...aggregate.sources][0] : '')) },
+      { label: 'Канал', value: client.channel || '-' },
       { label: 'Метки/рейтинг', value: `${tagsToText(client.tags)} ${client.rating ? `· ${client.rating}` : ''}`.trim() || '-' },
       { label: 'Внутренние заметки', value: client.comment || '-' },
       { label: 'Связанные услуги', value: relatedUpsell.join(', ') || '-' }
@@ -2915,6 +3265,7 @@
     const financials = calculateFinancials(els.costInput.value, els.prepaymentInput.value);
 
     return normalizeRequest({
+      ...existing,
       id,
       createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -3305,6 +3656,7 @@
       const existing = editingId ? getClientById(editingId) : null;
 
       const payload = normalizeClient({
+        ...existing,
         id: editingId || uid('cl'),
         createdAt: existing?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -3960,6 +4312,37 @@
     });
 
     els.jsonFileInput.addEventListener('change', handleJsonImport);
+
+    if (els.syncRemoteBtn) {
+      els.syncRemoteBtn.addEventListener('click', () => {
+        syncRequestsFromRemote({ manual: true });
+      });
+    }
+
+    if (els.setRemoteApiBtn) {
+      els.setRemoteApiBtn.addEventListener('click', () => {
+        const nextUrl = prompt('URL интеграционного backend (пример: http://localhost:8787)', state.remote.apiBaseUrl || 'http://localhost:8787');
+        if (nextUrl === null) return;
+
+        const normalizedUrl = normalizeApiBaseUrl(nextUrl);
+        if (!normalizedUrl) {
+          alert('Некорректный URL endpoint.');
+          return;
+        }
+
+        state.remote.apiBaseUrl = normalizedUrl;
+
+        const nextToken = prompt('Read token для GET /api/requests (опционально, можно оставить пустым)', state.remote.readToken || '');
+        if (nextToken !== null) {
+          state.remote.readToken = sanitizeString(nextToken);
+        }
+
+        state.remote.lastError = '';
+        saveRemoteState();
+        renderRemoteSyncStatus();
+        startRemoteSyncLoop();
+      });
+    }
   }
 
   function exportPhonesCsv() {
@@ -3987,7 +4370,8 @@
 
   function exportFullCsv() {
     const header = [
-      'ID', 'Создана', 'Клиент', 'Телефон', 'Источник', 'Метки',
+      'ID', 'Создана', 'Клиент', 'Телефон', 'Источник', 'Канал', 'Источник страницы', 'Landing ID', 'Booking Origin', 'Created From', 'Метки',
+      'UTM Source', 'UTM Medium', 'UTM Campaign', 'UTM Content', 'UTM Term', 'Referrer',
       'Зона', 'Улица', 'Дом', 'Адрес',
       'Услуга', 'Вид работ', 'Дата объекта', 'Начало', 'Окончание', 'Длительность',
       'Статус', 'Стоимость', 'Предоплата', 'Остаток', 'Статус оплаты', 'Способ оплаты', 'Ссылка оплаты', 'Дата оплаты',
@@ -4001,7 +4385,18 @@
       request.clientName,
       request.phone,
       sourceLabel(request.source),
+      request.channel || '',
+      request.sourcePage || '',
+      request.landingId || '',
+      request.bookingOrigin || '',
+      request.createdFrom || '',
       tagsToText(request.tags),
+      request.utmSource || '',
+      request.utmMedium || '',
+      request.utmCampaign || '',
+      request.utmContent || '',
+      request.utmTerm || '',
+      request.referrer || '',
       settlementLabelFromRequest(request),
       request.street,
       request.house,
@@ -4035,7 +4430,7 @@
 
   function exportJsonBackup() {
     const payload = {
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       data: {
         requests: state.requests,
@@ -4046,6 +4441,7 @@
         zones: state.zones,
         marketingTasks: state.marketingTasks,
         uiState: state.ui,
+        remoteState: state.remote,
         notifications: {
           sentKeys: [...state.sentNotificationKeys],
           inApp: state.inAppNotifications
@@ -4078,6 +4474,9 @@
         if (data.uiState && typeof data.uiState === 'object') {
           state.ui = normalizeUIState(data.uiState);
         }
+        if (data.remoteState && typeof data.remoteState === 'object') {
+          state.remote = normalizeRemoteState(data.remoteState);
+        }
 
         const notifications = data.notifications || {};
         if (Array.isArray(notifications.sentKeys)) {
@@ -4100,6 +4499,8 @@
         saveUIState();
         saveSentNotificationKeys();
         saveInAppNotifications();
+        saveRemoteState();
+        startRemoteSyncLoop();
 
         resetAllForms();
         renderAll();
@@ -4145,6 +4546,7 @@
   }
 
 })();
+
 
 
 
