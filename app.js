@@ -2,25 +2,29 @@
   'use strict';
 
   const STORAGE_KEYS = {
-    requests: 'mini_crm_requests_v1',
-    fuel: 'mini_crm_fuel_cache_v1'
+    jobs: 'mini_crm_jobs_v2',
+    legacyJobs: 'mini_crm_requests_v1',
+    clients: 'mini_crm_clients_v1',
+    expenses: 'mini_crm_expenses_v1',
+    fuel: 'mini_crm_fuel_cache_v1',
+    ui: 'mini_crm_ui_state_v1'
   };
 
   const DEFAULT_FUEL_CONSUMPTION_PER_HOUR = 10;
   const DEFAULT_FUEL_PRICE = 56;
+  const DEFAULT_OPERATOR_RATE = 1000;
 
-  const REQUEST_STATUSES = {
+  const STATUSES = {
     planned: 'planned',
     completed: 'completed'
   };
 
-  // Фичи для будущего роста CRM. Логика не меняется.
-  const features = {
-    machines: false,
-    employees: false,
-    marketing: false,
-    payments: false
+  const OPERATOR_PAY_MODES = {
+    auto: 'auto',
+    manual: 'manual'
   };
+
+  const EXPENSE_CATEGORIES = ['repair', 'parts', 'fuel', 'operator', 'other'];
 
   const DRIFF_DT_SPB_URL = 'https://driff.ru/fuel-dynamics/dt/sankt-peterburg/';
   const DRIFF_PROXY_URLS = [
@@ -45,57 +49,82 @@
 
   const state = {
     fuelCache: loadFuelCache(),
-    requests: [],
-    historyRange: 'all'
+    jobs: [],
+    expenses: [],
+    clients: [],
+    ui: loadUiState(),
+    expenseEditingId: null
   };
 
-  state.requests = loadRequests(getCurrentFuelPriceNumber());
+  state.jobs = loadJobs(getCurrentFuelPriceNumber());
+  state.expenses = loadExpenses();
+  state.clients = deriveClients(state.jobs);
 
   const els = {
     navButtons: Array.from(document.querySelectorAll('.bottom-nav-btn')),
     sections: Array.from(document.querySelectorAll('.section')),
 
-    requestForm: document.getElementById('requestForm'),
-    formMessage: document.getElementById('formMessage'),
+    jobForm: document.getElementById('jobForm'),
+    jobFormMessage: document.getElementById('jobFormMessage'),
+    operatorPayMode: document.getElementById('operatorPayMode'),
+    operatorPayWrap: document.getElementById('operatorPayWrap'),
 
-    worksList: document.getElementById('worksList'),
-    clientsList: document.getElementById('clientsList'),
-    clientsMessage: document.getElementById('clientsMessage'),
+    previewFuelCost: document.getElementById('previewFuelCost'),
+    previewOperatorPay: document.getElementById('previewOperatorPay'),
+    previewNetProfit: document.getElementById('previewNetProfit'),
 
-    exportCsvBtn: document.getElementById('exportCsvBtn'),
-
-    historyFilterButtons: Array.from(document.querySelectorAll('.history-filter-btn')),
+    historyRangeFilters: Array.from(document.querySelectorAll('#historyRangeFilters .filter-btn')),
     historyTableBody: document.getElementById('historyTableBody'),
     exportHistoryCsvBtn: document.getElementById('exportHistoryCsvBtn'),
     historyMessage: document.getElementById('historyMessage'),
 
-    refreshFuelBtn: document.getElementById('refreshFuelBtn'),
-    fuelPrice: document.getElementById('fuelPrice'),
-    fuelMeta: document.getElementById('fuelMeta'),
+    expenseForm: document.getElementById('expenseForm'),
+    expenseRelatedJobId: document.getElementById('expenseRelatedJobId'),
+    expenseFormMessage: document.getElementById('expenseFormMessage'),
+    cancelExpenseEditBtn: document.getElementById('cancelExpenseEditBtn'),
+
+    expenseRangeFilters: Array.from(document.querySelectorAll('#expenseRangeFilters .filter-btn')),
+    expenseCategoryFilters: Array.from(document.querySelectorAll('#expenseCategoryFilters .filter-btn')),
+    expensesTableBody: document.getElementById('expensesTableBody'),
+    exportExpensesCsvBtn: document.getElementById('exportExpensesCsvBtn'),
+    expensesMessage: document.getElementById('expensesMessage'),
+
+    clientsList: document.getElementById('clientsList'),
+    exportClientsCsvBtn: document.getElementById('exportClientsCsvBtn'),
+    clientsMessage: document.getElementById('clientsMessage'),
 
     nextJob: document.getElementById('nextJob'),
 
-    todayHours: document.getElementById('todayHours'),
-    todayAmount: document.getElementById('todayAmount'),
-    monthHours: document.getElementById('monthHours'),
-    monthAmount: document.getElementById('monthAmount'),
+    todayHoursCard: document.getElementById('todayHoursCard'),
+    todayRevenueCard: document.getElementById('todayRevenueCard'),
+    todayExpensesCard: document.getElementById('todayExpensesCard'),
+    todayNetCard: document.getElementById('todayNetCard'),
 
-    todayProfit: document.getElementById('todayProfit'),
-    perfHours: document.getElementById('perfHours'),
-    perfRevenue: document.getElementById('perfRevenue'),
-    perfFuel: document.getElementById('perfFuel'),
-    perfRevenueFill: document.getElementById('perfRevenueFill'),
-    perfFuelFill: document.getElementById('perfFuelFill'),
+    todayFuelCost: document.getElementById('todayFuelCost'),
+    todayOperatorCost: document.getElementById('todayOperatorCost'),
+    monthRepairParts: document.getElementById('monthRepairParts'),
 
-    featureFlags: document.getElementById('featureFlags')
+    monthIncome: document.getElementById('monthIncome'),
+    monthFuel: document.getElementById('monthFuel'),
+    monthOperator: document.getElementById('monthOperator'),
+    monthRepair: document.getElementById('monthRepair'),
+    monthParts: document.getElementById('monthParts'),
+    monthOther: document.getElementById('monthOther'),
+    monthNet: document.getElementById('monthNet'),
+
+    refreshFuelBtn: document.getElementById('refreshFuelBtn'),
+    fuelPrice: document.getElementById('fuelPrice'),
+    fuelMeta: document.getElementById('fuelMeta')
   };
 
   init();
 
   function init() {
     bindEvents();
-    setDefaultDate();
-    renderFeatureFlags();
+    setDefaultDates();
+    syncUiFilters();
+    applyUiStateSection();
+    syncDerivedJobFields();
     renderAll();
     refreshFuelPrice(false);
   }
@@ -105,84 +134,187 @@
       button.addEventListener('click', () => switchSection(button.dataset.section));
     });
 
-    els.requestForm.addEventListener('submit', handleFormSubmit);
-    els.exportCsvBtn.addEventListener('click', handleExportClientsCsv);
-
-    els.exportHistoryCsvBtn.addEventListener('click', handleExportHistoryCsv);
-    els.historyFilterButtons.forEach((button) => {
-      button.addEventListener('click', () => setHistoryRange(button.dataset.range));
+    els.jobForm.addEventListener('submit', handleJobSubmit);
+    els.jobForm.addEventListener('input', renderJobPreview);
+    els.operatorPayMode.addEventListener('change', () => {
+      toggleOperatorManualInput();
+      renderJobPreview();
     });
 
-    els.historyTableBody.addEventListener('click', handleHistoryTableClick);
+    els.historyRangeFilters.forEach((button) => {
+      button.addEventListener('click', () => setHistoryRange(button.dataset.range));
+    });
+    els.exportHistoryCsvBtn.addEventListener('click', handleExportHistoryCsv);
+    els.historyTableBody.addEventListener('click', handleHistoryClick);
+
+    els.expenseForm.addEventListener('submit', handleExpenseSubmit);
+    els.cancelExpenseEditBtn.addEventListener('click', cancelExpenseEdit);
+
+    els.expenseRangeFilters.forEach((button) => {
+      button.addEventListener('click', () => setExpenseRange(button.dataset.range));
+    });
+    els.expenseCategoryFilters.forEach((button) => {
+      button.addEventListener('click', () => setExpenseCategory(button.dataset.category));
+    });
+
+    els.expensesTableBody.addEventListener('click', handleExpenseTableClick);
+    els.exportExpensesCsvBtn.addEventListener('click', handleExportExpensesCsv);
+
+    els.exportClientsCsvBtn.addEventListener('click', handleExportClientsCsv);
 
     els.refreshFuelBtn.addEventListener('click', () => refreshFuelPrice(true));
   }
 
   function switchSection(sectionId) {
+    const safeSection = getValidSection(sectionId);
+
     els.navButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.section === sectionId);
+      button.classList.toggle('active', button.dataset.section === safeSection);
     });
 
     els.sections.forEach((section) => {
-      section.classList.toggle('active', section.id === sectionId);
+      section.classList.toggle('active', section.id === safeSection);
+    });
+
+    state.ui.section = safeSection;
+    persistUiState();
+  }
+
+  function getValidSection(sectionId) {
+    const validSections = ['dashboard', 'add-job', 'history', 'expenses', 'clients'];
+    return validSections.includes(sectionId) ? sectionId : 'dashboard';
+  }
+
+  function applyUiStateSection() {
+    switchSection(state.ui.section || 'dashboard');
+  }
+
+  function setDefaultDates() {
+    if (!els.jobForm.elements.date.value) {
+      els.jobForm.elements.date.value = toInputDate(new Date());
+    }
+
+    if (!els.expenseForm.elements.date.value) {
+      els.expenseForm.elements.date.value = toInputDate(new Date());
+    }
+
+    if (!els.jobForm.elements.operatorRate.value) {
+      els.jobForm.elements.operatorRate.value = String(DEFAULT_OPERATOR_RATE);
+    }
+
+    if (!els.jobForm.elements.fuelPrice.value) {
+      els.jobForm.elements.fuelPrice.value = String(getCurrentFuelPriceNumber());
+    }
+
+    if (!els.jobForm.elements.operatorPayMode.value) {
+      els.jobForm.elements.operatorPayMode.value = OPERATOR_PAY_MODES.auto;
+    }
+
+    toggleOperatorManualInput();
+    renderJobPreview();
+  }
+
+  function syncUiFilters() {
+    const historyRange = ['today', 'week', 'month', 'all'].includes(state.ui.historyRange) ? state.ui.historyRange : 'all';
+    state.ui.historyRange = historyRange;
+
+    els.historyRangeFilters.forEach((button) => {
+      button.classList.toggle('active', button.dataset.range === historyRange);
+    });
+
+    const expenseRange = ['today', 'month', 'all'].includes(state.ui.expenseRange) ? state.ui.expenseRange : 'all';
+    state.ui.expenseRange = expenseRange;
+
+    els.expenseRangeFilters.forEach((button) => {
+      button.classList.toggle('active', button.dataset.range === expenseRange);
+    });
+
+    const expenseCategory = ['all', ...EXPENSE_CATEGORIES].includes(state.ui.expenseCategory)
+      ? state.ui.expenseCategory
+      : 'all';
+    state.ui.expenseCategory = expenseCategory;
+
+    els.expenseCategoryFilters.forEach((button) => {
+      button.classList.toggle('active', button.dataset.category === expenseCategory);
     });
   }
 
   function setHistoryRange(range) {
-    state.historyRange = ['today', 'week', 'month', 'all'].includes(range) ? range : 'all';
-
-    els.historyFilterButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.range === state.historyRange);
-    });
-
-    renderHistoryTable(getHistoryRequests());
+    state.ui.historyRange = ['today', 'week', 'month', 'all'].includes(range) ? range : 'all';
+    syncUiFilters();
+    persistUiState();
+    renderHistoryTable();
   }
 
-  function setDefaultDate() {
-    const dateInput = els.requestForm.elements.date;
-    if (!dateInput.value) {
-      dateInput.value = toInputDate(new Date());
-    }
+  function setExpenseRange(range) {
+    state.ui.expenseRange = ['today', 'month', 'all'].includes(range) ? range : 'all';
+    syncUiFilters();
+    persistUiState();
+    renderExpensesTable();
   }
 
-  function handleFormSubmit(event) {
+  function setExpenseCategory(category) {
+    state.ui.expenseCategory = ['all', ...EXPENSE_CATEGORIES].includes(category) ? category : 'all';
+    syncUiFilters();
+    persistUiState();
+    renderExpensesTable();
+  }
+
+  function handleJobSubmit(event) {
     event.preventDefault();
 
-    const formData = new FormData(els.requestForm);
-    const request = buildRequestFromForm(formData);
+    const formData = new FormData(els.jobForm);
+    const job = buildJobFromForm(formData);
 
-    if (!isValidRequest(request)) {
-      setMessage(els.formMessage, 'Проверьте форму: заполните обязательные поля и корректные числа.', 'error');
+    if (!isJobValid(job)) {
+      setMessage(els.jobFormMessage, 'Проверьте форму заявки: заполните обязательные поля и числа.', 'error');
       return;
     }
 
-    state.requests.push(request);
-    persistRequests();
-    renderAll();
+    state.jobs.push(job);
+    persistJobs();
 
-    els.requestForm.reset();
-    setDefaultDate();
-    setMessage(els.formMessage, 'Заявка успешно добавлена.', 'success');
+    els.jobForm.reset();
+    setDefaultDates();
+    setMessage(els.jobFormMessage, 'Заявка добавлена.', 'success');
+
+    renderAll();
     switchSection('dashboard');
   }
 
-  function buildRequestFromForm(formData) {
+  function buildJobFromForm(formData) {
     const date = String(formData.get('date') || '').trim();
     const hours = toNonNegativeNumber(formData.get('hours'));
     const amount = toNonNegativeNumber(formData.get('amount'));
 
     const fuelLitersInput = String(formData.get('fuelLiters') || '').trim();
-    const parsedFuelLiters = toOptionalNonNegativeNumber(fuelLitersInput);
-    const fuelLiters = Number.isFinite(parsedFuelLiters)
-      ? parsedFuelLiters
+    const fuelLiters = Number.isFinite(toOptionalNonNegativeNumber(fuelLitersInput))
+      ? toOptionalNonNegativeNumber(fuelLitersInput)
       : round2(hours * DEFAULT_FUEL_CONSUMPTION_PER_HOUR);
 
-    const fuelPrice = getCurrentFuelPriceNumber();
+    const fuelPriceInput = String(formData.get('fuelPrice') || '').trim();
+    const fuelPrice = Number.isFinite(toOptionalPositiveNumber(fuelPriceInput))
+      ? toOptionalPositiveNumber(fuelPriceInput)
+      : getCurrentFuelPriceNumber();
+
     const fuelCost = round2(fuelLiters * fuelPrice);
-    const profit = round2(amount - fuelCost);
+
+    const operatorRateInput = String(formData.get('operatorRate') || '').trim();
+    const operatorRate = Number.isFinite(toOptionalNonNegativeNumber(operatorRateInput))
+      ? toOptionalNonNegativeNumber(operatorRateInput)
+      : DEFAULT_OPERATOR_RATE;
+
+    const operatorPayMode = formData.get('operatorPayMode') === OPERATOR_PAY_MODES.manual ? OPERATOR_PAY_MODES.manual : OPERATOR_PAY_MODES.auto;
+
+    const operatorPayInput = String(formData.get('operatorPay') || '').trim();
+    const operatorPay = operatorPayMode === OPERATOR_PAY_MODES.auto
+      ? round2(operatorRate * hours)
+      : round2(toNonNegativeNumber(operatorPayInput));
+
+    const jobNetProfit = round2(amount - fuelCost - operatorPay);
 
     return {
-      id: createId(),
+      id: createId('job'),
       name: String(formData.get('name') || '').trim(),
       phone: String(formData.get('phone') || '').trim(),
       date,
@@ -190,410 +322,629 @@
       address: String(formData.get('address') || '').trim(),
       hours,
       amount,
+
       fuelLiters,
       fuelPrice,
       fuelCost,
-      profit,
-      status: resolveStatus(REQUEST_STATUSES.planned, date),
+
+      operatorRate,
+      operatorPay,
+      operatorPayMode,
+
+      jobNetProfit,
+      status: resolveStatus(STATUSES.planned, date),
       createdAt: new Date().toISOString()
     };
   }
 
-  function isValidRequest(request) {
-    return Boolean(
-      request.name &&
-        request.phone &&
-        request.date &&
-        request.workType &&
-        request.address &&
-        Number.isFinite(request.hours) &&
-        Number.isFinite(request.amount) &&
-        Number.isFinite(request.fuelLiters) &&
-        Number.isFinite(request.fuelPrice) &&
-        Number.isFinite(request.fuelCost) &&
-        Number.isFinite(request.profit) &&
-        request.hours >= 0 &&
-        request.amount >= 0 &&
-        request.fuelLiters >= 0 &&
-        request.fuelPrice > 0
-    );
+  function toggleOperatorManualInput() {
+    const mode = els.jobForm.elements.operatorPayMode.value;
+    const isManual = mode === OPERATOR_PAY_MODES.manual;
+    els.operatorPayWrap.classList.toggle('hidden', !isManual);
   }
 
-  function isCoreRequestValid(request) {
-    return Boolean(
-      request &&
-        request.name &&
-        request.phone &&
-        request.date &&
-        request.workType &&
-        request.address &&
-        Number.isFinite(request.hours) &&
-        Number.isFinite(request.amount) &&
-        request.hours >= 0 &&
-        request.amount >= 0
-    );
+  function renderJobPreview() {
+    const form = els.jobForm.elements;
+
+    const hours = toNonNegativeNumber(form.hours.value);
+    const amount = toNonNegativeNumber(form.amount.value);
+
+    const fuelLiters = Number.isFinite(toOptionalNonNegativeNumber(form.fuelLiters.value))
+      ? toOptionalNonNegativeNumber(form.fuelLiters.value)
+      : round2(hours * DEFAULT_FUEL_CONSUMPTION_PER_HOUR);
+
+    const fuelPrice = Number.isFinite(toOptionalPositiveNumber(form.fuelPrice.value))
+      ? toOptionalPositiveNumber(form.fuelPrice.value)
+      : getCurrentFuelPriceNumber();
+
+    const fuelCost = round2(fuelLiters * fuelPrice);
+
+    const operatorRate = Number.isFinite(toOptionalNonNegativeNumber(form.operatorRate.value))
+      ? toOptionalNonNegativeNumber(form.operatorRate.value)
+      : DEFAULT_OPERATOR_RATE;
+
+    const operatorPayMode = form.operatorPayMode.value === OPERATOR_PAY_MODES.manual ? OPERATOR_PAY_MODES.manual : OPERATOR_PAY_MODES.auto;
+
+    const operatorPay = operatorPayMode === OPERATOR_PAY_MODES.auto
+      ? round2(operatorRate * hours)
+      : round2(toNonNegativeNumber(form.operatorPay.value));
+
+    const netProfit = round2(amount - fuelCost - operatorPay);
+
+    els.previewFuelCost.textContent = formatCurrency(fuelCost);
+    els.previewOperatorPay.textContent = formatCurrency(operatorPay);
+    els.previewNetProfit.textContent = formatCurrency(netProfit);
   }
 
-  function setMessage(element, text, type) {
-    if (!element) {
-      return;
-    }
-
-    element.textContent = text || '';
-    element.classList.remove('success', 'error');
-
-    if (type) {
-      element.classList.add(type);
-    }
+  function isJobValid(job) {
+    return Boolean(
+      job.name &&
+      job.phone &&
+      job.date &&
+      job.workType &&
+      job.address &&
+      Number.isFinite(job.hours) && job.hours >= 0 &&
+      Number.isFinite(job.amount) && job.amount >= 0 &&
+      Number.isFinite(job.fuelLiters) && job.fuelLiters >= 0 &&
+      Number.isFinite(job.fuelPrice) && job.fuelPrice > 0 &&
+      Number.isFinite(job.fuelCost) &&
+      Number.isFinite(job.operatorRate) && job.operatorRate >= 0 &&
+      Number.isFinite(job.operatorPay) && job.operatorPay >= 0 &&
+      Number.isFinite(job.jobNetProfit)
+    );
   }
 
   function renderAll() {
-    syncDerivedRequestFields();
+    syncDerivedJobFields();
+    state.clients = deriveClients(state.jobs);
 
-    const requestsByDateDesc = getSortedRequestsByDate(state.requests, 'desc');
+    persistClients();
 
-    renderDashboard(requestsByDateDesc);
-    renderNextJob(state.requests);
-    renderWorksList(requestsByDateDesc);
-    renderClientsList(requestsByDateDesc);
-    renderHistoryTable(getHistoryRequests());
+    renderDashboard();
+    renderNextJob();
+    renderHistoryTable();
+    renderExpensesTable();
+    renderClients();
+    populateExpenseJobOptions();
+    renderJobPreview();
   }
 
-  function renderDashboard(requests) {
+  function renderDashboard() {
     const now = new Date();
+    const todayJobs = state.jobs.filter((job) => isSameDay(parseDate(job.date), now));
+    const monthJobs = state.jobs.filter((job) => isSameMonth(parseDate(job.date), now));
 
-    const todayRequests = requests.filter((request) => isSameDay(parseDate(request.date), now));
-    const monthRequests = requests.filter((request) => isSameMonth(parseDate(request.date), now));
+    const todayExpensesItems = getExpensesForRange(state.expenses, 'today', 'all');
+    const monthExpensesItems = getExpensesForRange(state.expenses, 'month', 'all');
 
-    const todayHours = todayRequests.reduce((sum, item) => sum + item.hours, 0);
-    const todayAmount = todayRequests.reduce((sum, item) => sum + item.amount, 0);
-    const monthHours = monthRequests.reduce((sum, item) => sum + item.hours, 0);
-    const monthAmount = monthRequests.reduce((sum, item) => sum + item.amount, 0);
+    const todayHours = sumBy(todayJobs, 'hours');
+    const todayIncome = sumBy(todayJobs, 'amount');
 
-    const todayFuelLiters = todayRequests.reduce((sum, item) => sum + item.fuelLiters, 0);
-    const todayFuelCost = todayRequests.reduce((sum, item) => sum + item.fuelCost, 0);
-    const todayProfit = todayRequests.reduce((sum, item) => sum + item.profit, 0);
+    const jobFuelToday = sumBy(todayJobs, 'fuelCost');
+    const jobOperatorToday = sumBy(todayJobs, 'operatorPay');
+    const otherToday = sumAmount(todayExpensesItems);
 
-    els.todayHours.textContent = formatHours(todayHours);
-    els.todayAmount.textContent = formatCurrency(todayAmount);
-    els.monthHours.textContent = formatHours(monthHours);
-    els.monthAmount.textContent = formatCurrency(monthAmount);
+    const todayTotalExpenses = round2(jobFuelToday + jobOperatorToday + otherToday);
+    const todayNetProfit = round2(todayIncome - todayTotalExpenses);
 
-    els.todayProfit.textContent = formatCurrency(todayProfit);
-    els.perfHours.textContent = `${formatHours(todayHours)} ч`;
-    els.perfRevenue.textContent = formatCurrency(todayAmount);
-    els.perfFuel.textContent = `${formatDecimal(todayFuelLiters)} л`;
+    els.todayHoursCard.textContent = formatHours(todayHours);
+    els.todayRevenueCard.textContent = formatCurrency(todayIncome);
+    els.todayExpensesCard.textContent = formatCurrency(todayTotalExpenses);
+    els.todayNetCard.textContent = formatCurrency(todayNetProfit);
 
-    updatePerformanceBars(todayAmount, todayFuelCost);
+    const todayFuelCategory = sumAmount(filterByCategory(todayExpensesItems, 'fuel'));
+    const todayOperatorCategory = sumAmount(filterByCategory(todayExpensesItems, 'operator'));
+
+    els.todayFuelCost.textContent = formatCurrency(jobFuelToday + todayFuelCategory);
+    els.todayOperatorCost.textContent = formatCurrency(jobOperatorToday + todayOperatorCategory);
+
+    const monthRepair = sumAmount(filterByCategory(monthExpensesItems, 'repair'));
+    const monthParts = sumAmount(filterByCategory(monthExpensesItems, 'parts'));
+
+    els.monthRepairParts.textContent = formatCurrency(monthRepair + monthParts);
+
+    const monthIncome = sumBy(monthJobs, 'amount');
+    const monthFuel = sumBy(monthJobs, 'fuelCost') + sumAmount(filterByCategory(monthExpensesItems, 'fuel'));
+    const monthOperator = sumBy(monthJobs, 'operatorPay') + sumAmount(filterByCategory(monthExpensesItems, 'operator'));
+    const monthOther = sumAmount(filterByCategory(monthExpensesItems, 'other'));
+
+    const monthNet = round2(monthIncome - monthFuel - monthOperator - monthRepair - monthParts - monthOther);
+
+    els.monthIncome.textContent = formatCurrency(monthIncome);
+    els.monthFuel.textContent = formatCurrency(monthFuel);
+    els.monthOperator.textContent = formatCurrency(monthOperator);
+    els.monthRepair.textContent = formatCurrency(monthRepair);
+    els.monthParts.textContent = formatCurrency(monthParts);
+    els.monthOther.textContent = formatCurrency(monthOther);
+    els.monthNet.textContent = formatCurrency(monthNet);
   }
 
-  function updatePerformanceBars(revenue, fuelCost) {
-    const safeRevenue = Math.max(0, revenue);
-    const safeFuelCost = Math.max(0, fuelCost);
-
-    const revenueWidth = safeRevenue > 0 ? 100 : 0;
-    const fuelWidth = safeRevenue > 0 ? Math.min(100, (safeFuelCost / safeRevenue) * 100) : 0;
-
-    els.perfRevenueFill.style.width = `${revenueWidth}%`;
-    els.perfFuelFill.style.width = `${fuelWidth > 0 ? Math.max(fuelWidth, 6) : 0}%`;
-  }
-
-  function renderNextJob(requests) {
+  function renderNextJob() {
     const today = startOfLocalDay(new Date());
 
-    const futurePlanned = [...requests]
-      .filter((request) => {
-        const date = parseDate(request.date);
-        return date && date >= today && resolveStatus(request.status, request.date) === REQUEST_STATUSES.planned;
+    const nextJob = [...state.jobs]
+      .filter((job) => {
+        const date = parseDate(job.date);
+        return date && date >= today && job.status === STATUSES.planned;
       })
-      .sort((a, b) => parseDate(a.date) - parseDate(b.date));
-
-    const nextJob = futurePlanned[0];
+      .sort((a, b) => parseDate(a.date) - parseDate(b.date))[0];
 
     if (!nextJob) {
-      els.nextJob.innerHTML = '<div class="empty-state">Пока нет будущих заявок.</div>';
+      els.nextJob.className = 'empty-state';
+      els.nextJob.textContent = 'Пока нет будущих заявок.';
       return;
     }
 
+    els.nextJob.className = '';
     els.nextJob.innerHTML = `
-      <div class="next-job-content">
-        <div class="next-job-main">
-          <p class="next-job-name">${escapeHtml(nextJob.name)}</p>
-          <p class="next-job-date">${escapeHtml(formatLongDate(nextJob.date))}</p>
-          <p class="next-job-type">${escapeHtml(nextJob.workType)}</p>
-          <p class="next-job-address">${escapeHtml(nextJob.address)}</p>
-        </div>
-        <div class="next-job-footer">
-          <span>Часы: ${escapeHtml(formatHours(nextJob.hours))}</span>
-          <strong>${escapeHtml(formatCurrency(nextJob.amount))}</strong>
-        </div>
+      <div class="next-job-main">
+        <strong>${escapeHtml(nextJob.name)}</strong>
+        <p>${escapeHtml(formatLongDate(nextJob.date))}</p>
+        <p>${escapeHtml(nextJob.workType)}</p>
+        <p>${escapeHtml(nextJob.address)}</p>
+      </div>
+      <div class="next-job-footer">
+        <span>Часы: ${escapeHtml(formatHours(nextJob.hours))}</span>
+        <strong>${escapeHtml(formatCurrency(nextJob.amount))}</strong>
       </div>
     `;
   }
 
-  function renderWorksList(requests) {
-    const recent = requests.slice(0, 6);
+  function renderHistoryTable() {
+    const jobs = getJobsForHistory();
 
-    if (!recent.length) {
-      els.worksList.innerHTML = '<div class="empty-state">Пока нет заявок.</div>';
+    if (!jobs.length) {
+      els.historyTableBody.innerHTML = '<tr><td class="empty-state" colspan="12">Нет заявок по выбранному фильтру.</td></tr>';
       return;
     }
 
-    els.worksList.innerHTML = recent
-      .map(
-        (request) => `
-          <article class="work-item">
-            <div class="work-item-head">
-              <strong>${escapeHtml(formatDate(request.date))}</strong>
-              <span class="tag tag-light">${escapeHtml(request.name)}</span>
-            </div>
-            <div class="work-meta">
-              <div>${escapeHtml(request.workType)}</div>
-              <div>${escapeHtml(request.address)}</div>
-            </div>
-            <div class="work-tags">
-              <span class="tag">${escapeHtml(formatHours(request.hours))} ч</span>
-              <span class="tag tag-light">${escapeHtml(formatCurrency(request.amount))}</span>
-            </div>
-          </article>
-        `
-      )
+    els.historyTableBody.innerHTML = jobs
+      .map((job) => `
+        <tr>
+          <td>${escapeHtml(formatDate(job.date))}</td>
+          <td>${escapeHtml(job.name)}</td>
+          <td>${escapeHtml(job.phone)}</td>
+          <td>${escapeHtml(job.workType)}</td>
+          <td>${escapeHtml(job.address)}</td>
+          <td>${escapeHtml(formatHours(job.hours))}</td>
+          <td>${escapeHtml(formatCurrency(job.amount))}</td>
+          <td>${escapeHtml(formatCurrency(job.fuelCost))}</td>
+          <td>${escapeHtml(formatCurrency(job.operatorPay))}</td>
+          <td>${escapeHtml(formatCurrency(job.jobNetProfit))}</td>
+          <td>${renderStatusBadge(job.status)}</td>
+          <td><button type="button" class="action-btn" data-repeat-job-id="${escapeHtml(job.id)}">Повторить</button></td>
+        </tr>
+      `)
       .join('');
   }
 
-  function renderClientsList(requests) {
-    const clients = aggregateClients(requests);
-
-    if (!clients.length) {
-      els.clientsList.innerHTML = '<div class="empty-state">Пока нет клиентов.</div>';
+  function handleHistoryClick(event) {
+    const repeatButton = event.target.closest('button[data-repeat-job-id]');
+    if (!repeatButton) {
       return;
     }
 
-    els.clientsList.innerHTML = clients
-      .map(
-        (client) => `
-          <article class="client-item">
-            <div class="client-item-head">
-              <strong>${escapeHtml(client.name)}</strong>
-              <span class="tag">${escapeHtml(formatCurrency(client.totalAmount))}</span>
-            </div>
-            <div class="client-meta">
-              <div>${escapeHtml(client.phone)}</div>
-            </div>
-            <div class="client-tags">
-              <span class="tag tag-light">Заявок: ${escapeHtml(String(client.requestsCount))}</span>
-            </div>
-          </article>
-        `
-      )
-      .join('');
-  }
+    const sourceId = repeatButton.dataset.repeatJobId;
+    const sourceJob = state.jobs.find((job) => job.id === sourceId);
 
-  function renderHistoryTable(requests) {
-    if (!requests.length) {
-      els.historyTableBody.innerHTML = '<tr><td class="empty-state" colspan="10">По выбранному фильтру нет заявок.</td></tr>';
+    if (!sourceJob) {
+      setMessage(els.historyMessage, 'Не удалось найти заявку для повтора.', 'error');
       return;
     }
 
-    els.historyTableBody.innerHTML = requests
-      .map(
-        (request) => `
-          <tr>
-            <td>${escapeHtml(formatDate(request.date))}</td>
-            <td>${escapeHtml(request.name)}</td>
-            <td>${escapeHtml(request.phone)}</td>
-            <td>${escapeHtml(request.workType)}</td>
-            <td>${escapeHtml(request.address)}</td>
-            <td>${escapeHtml(formatHours(request.hours))}</td>
-            <td>${escapeHtml(formatCurrency(request.amount))}</td>
-            <td>${escapeHtml(formatDecimal(request.fuelLiters))}</td>
-            <td>${renderStatusBadge(request.status)}</td>
-            <td>
-              <button class="repeat-btn" type="button" data-repeat-id="${escapeHtml(request.id)}">Повторить</button>
-            </td>
-          </tr>
-        `
-      )
-      .join('');
+    const clone = normalizeJob({
+      ...sourceJob,
+      id: createId('job'),
+      date: toInputDate(new Date()),
+      status: STATUSES.planned,
+      createdAt: new Date().toISOString()
+    }, getCurrentFuelPriceNumber());
+
+    state.jobs.push(clone);
+    persistJobs();
+
+    renderAll();
+    setMessage(els.historyMessage, 'Заявка успешно повторена (дата: сегодня).', 'success');
   }
 
-  function renderStatusBadge(status) {
-    const safeStatus = status === REQUEST_STATUSES.completed ? REQUEST_STATUSES.completed : REQUEST_STATUSES.planned;
-    const label = safeStatus === REQUEST_STATUSES.completed ? 'Выполнено' : 'Запланировано';
-    const className = safeStatus === REQUEST_STATUSES.completed ? 'history-status history-status-completed' : 'history-status history-status-planned';
-    return `<span class="${className}">${label}</span>`;
-  }
+  function getJobsForHistory() {
+    const sorted = getSortedJobsByDate(state.jobs, 'desc');
+    const range = state.ui.historyRange || 'all';
 
-  function getHistoryRequests() {
-    const sortedDesc = getSortedRequestsByDate(state.requests, 'desc');
-
-    if (state.historyRange === 'all') {
-      return sortedDesc;
+    if (range === 'all') {
+      return sorted;
     }
 
     const now = new Date();
 
-    if (state.historyRange === 'today') {
-      return sortedDesc.filter((request) => isSameDay(parseDate(request.date), now));
+    if (range === 'today') {
+      return sorted.filter((job) => isSameDay(parseDate(job.date), now));
     }
 
-    if (state.historyRange === 'week') {
-      const fromDate = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
-      const toDate = endOfLocalDay(now);
-      return sortedDesc.filter((request) => {
-        const date = parseDate(request.date);
-        return date && date >= fromDate && date <= toDate;
+    if (range === 'week') {
+      const start = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+      const end = endOfLocalDay(now);
+      return sorted.filter((job) => {
+        const date = parseDate(job.date);
+        return date && date >= start && date <= end;
       });
     }
 
-    if (state.historyRange === 'month') {
-      return sortedDesc.filter((request) => isSameMonth(parseDate(request.date), now));
+    if (range === 'month') {
+      return sorted.filter((job) => isSameMonth(parseDate(job.date), now));
     }
 
-    return sortedDesc;
+    return sorted;
   }
 
-  function handleHistoryTableClick(event) {
-    const button = event.target.closest('button[data-repeat-id]');
-    if (!button) {
+  function renderStatusBadge(status) {
+    const safeStatus = status === STATUSES.completed ? STATUSES.completed : STATUSES.planned;
+    const label = safeStatus === STATUSES.completed ? 'Выполнено' : 'Запланировано';
+    const className = safeStatus === STATUSES.completed ? 'status-pill status-completed' : 'status-pill status-planned';
+    return `<span class="${className}">${label}</span>`;
+  }
+
+  function handleExportHistoryCsv() {
+    const jobs = getJobsForHistory();
+
+    if (!jobs.length) {
+      setMessage(els.historyMessage, 'Нет данных для экспорта.', 'error');
       return;
     }
 
-    const sourceId = button.dataset.repeatId;
-    const source = state.requests.find((item) => item.id === sourceId);
+    const headers = ['Дата', 'Клиент', 'Телефон', 'Тип работ', 'Адрес', 'Часы', 'Сумма', 'Топливо, л', 'Топливо, ₽', 'Машинист, ₽', 'Прибыль, ₽', 'Статус'];
 
-    if (!source) {
-      setMessage(els.historyMessage, 'Не удалось найти исходную заявку.', 'error');
+    const rows = jobs.map((job) => [
+      formatDate(job.date),
+      job.name,
+      job.phone,
+      job.workType,
+      job.address,
+      formatHours(job.hours),
+      String(job.amount),
+      String(job.fuelLiters),
+      String(job.fuelCost),
+      String(job.operatorPay),
+      String(job.jobNetProfit),
+      job.status
+    ]);
+
+    exportCsv(headers, rows, `history-${state.ui.historyRange || 'all'}-${toInputDate(new Date())}.csv`);
+    setMessage(els.historyMessage, 'CSV истории сформирован.', 'success');
+  }
+
+  function handleExpenseSubmit(event) {
+    event.preventDefault();
+
+    const formData = new FormData(els.expenseForm);
+    const expense = buildExpenseFromForm(formData);
+
+    if (!isExpenseValid(expense)) {
+      setMessage(els.expenseFormMessage, 'Проверьте форму расхода.', 'error');
       return;
     }
 
-    const repeatedRaw = {
-      ...source,
-      id: createId(),
-      date: toInputDate(new Date()),
-      status: REQUEST_STATUSES.planned,
+    if (state.expenseEditingId) {
+      const index = state.expenses.findIndex((item) => item.id === state.expenseEditingId);
+      if (index >= 0) {
+        state.expenses[index] = { ...expense, id: state.expenseEditingId, createdAt: state.expenses[index].createdAt };
+      }
+      state.expenseEditingId = null;
+      setMessage(els.expenseFormMessage, 'Расход обновлен.', 'success');
+    } else {
+      state.expenses.push(expense);
+      setMessage(els.expenseFormMessage, 'Расход добавлен.', 'success');
+    }
+
+    persistExpenses();
+    resetExpenseForm();
+    renderAll();
+  }
+
+  function buildExpenseFromForm(formData) {
+    const category = EXPENSE_CATEGORIES.includes(String(formData.get('category') || '').trim())
+      ? String(formData.get('category')).trim()
+      : 'other';
+
+    return {
+      id: createId('exp'),
+      date: String(formData.get('date') || '').trim(),
+      category,
+      title: String(formData.get('title') || '').trim(),
+      amount: round2(toNonNegativeNumber(formData.get('amount'))),
+      relatedJobId: String(formData.get('relatedJobId') || '').trim(),
+      comment: String(formData.get('comment') || '').trim(),
       createdAt: new Date().toISOString()
     };
-
-    const repeated = normalizeRequest(repeatedRaw, getCurrentFuelPriceNumber());
-
-    state.requests.push(repeated);
-    persistRequests();
-    renderAll();
-
-    setMessage(els.historyMessage, 'Повторная заявка создана с датой на сегодня.', 'success');
   }
 
-  function aggregateClients(requests) {
+  function isExpenseValid(expense) {
+    return Boolean(
+      expense.date &&
+      EXPENSE_CATEGORIES.includes(expense.category) &&
+      expense.title &&
+      Number.isFinite(expense.amount) &&
+      expense.amount >= 0
+    );
+  }
+
+  function resetExpenseForm() {
+    els.expenseForm.reset();
+    els.expenseForm.elements.date.value = toInputDate(new Date());
+    els.expenseForm.elements.category.value = 'repair';
+    els.expenseForm.elements.expenseId.value = '';
+    state.expenseEditingId = null;
+    els.cancelExpenseEditBtn.classList.add('hidden');
+  }
+
+  function cancelExpenseEdit() {
+    resetExpenseForm();
+    setMessage(els.expenseFormMessage, 'Редактирование отменено.', null);
+  }
+
+  function handleExpenseTableClick(event) {
+    const editButton = event.target.closest('button[data-edit-expense-id]');
+    if (editButton) {
+      startExpenseEdit(editButton.dataset.editExpenseId);
+      return;
+    }
+
+    const deleteButton = event.target.closest('button[data-delete-expense-id]');
+    if (deleteButton) {
+      deleteExpense(deleteButton.dataset.deleteExpenseId);
+    }
+  }
+
+  function startExpenseEdit(expenseId) {
+    const expense = state.expenses.find((item) => item.id === expenseId);
+    if (!expense) {
+      setMessage(els.expensesMessage, 'Расход не найден.', 'error');
+      return;
+    }
+
+    state.expenseEditingId = expense.id;
+    els.expenseForm.elements.expenseId.value = expense.id;
+    els.expenseForm.elements.date.value = expense.date;
+    els.expenseForm.elements.category.value = expense.category;
+    els.expenseForm.elements.title.value = expense.title;
+    els.expenseForm.elements.amount.value = String(expense.amount);
+    els.expenseForm.elements.relatedJobId.value = expense.relatedJobId || '';
+    els.expenseForm.elements.comment.value = expense.comment || '';
+
+    els.cancelExpenseEditBtn.classList.remove('hidden');
+    switchSection('expenses');
+    setMessage(els.expenseFormMessage, 'Режим редактирования расхода.', null);
+  }
+
+  function deleteExpense(expenseId) {
+    const exists = state.expenses.some((item) => item.id === expenseId);
+    if (!exists) {
+      setMessage(els.expensesMessage, 'Расход не найден.', 'error');
+      return;
+    }
+
+    state.expenses = state.expenses.filter((item) => item.id !== expenseId);
+    persistExpenses();
+    renderAll();
+
+    setMessage(els.expensesMessage, 'Расход удален.', 'success');
+
+    if (state.expenseEditingId === expenseId) {
+      resetExpenseForm();
+    }
+  }
+
+  function renderExpensesTable() {
+    const expenses = getFilteredExpenses();
+
+    if (!expenses.length) {
+      els.expensesTableBody.innerHTML = '<tr><td class="empty-state" colspan="6">Расходов по фильтру нет.</td></tr>';
+      return;
+    }
+
+    els.expensesTableBody.innerHTML = expenses
+      .map((expense) => `
+        <tr>
+          <td>${escapeHtml(formatDate(expense.date))}</td>
+          <td>${escapeHtml(expense.category)}</td>
+          <td>${escapeHtml(expense.title)}</td>
+          <td>${escapeHtml(formatCurrency(expense.amount))}</td>
+          <td>${escapeHtml(expense.comment || '-')}</td>
+          <td>
+            <button type="button" class="action-btn" data-edit-expense-id="${escapeHtml(expense.id)}">Ред.</button>
+            <button type="button" class="action-btn danger" data-delete-expense-id="${escapeHtml(expense.id)}">Удалить</button>
+          </td>
+        </tr>
+      `)
+      .join('');
+  }
+
+  function getFilteredExpenses() {
+    return getExpensesForRange(state.expenses, state.ui.expenseRange || 'all', state.ui.expenseCategory || 'all')
+      .sort((a, b) => {
+        const dA = parseDate(a.date);
+        const dB = parseDate(b.date);
+        const tsA = dA ? dA.getTime() : 0;
+        const tsB = dB ? dB.getTime() : 0;
+
+        if (tsA !== tsB) {
+          return tsB - tsA;
+        }
+
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+  }
+
+  function getExpensesForRange(expenses, range, category) {
+    const now = new Date();
+
+    let filtered = expenses;
+
+    if (range === 'today') {
+      filtered = filtered.filter((item) => isSameDay(parseDate(item.date), now));
+    }
+
+    if (range === 'month') {
+      filtered = filtered.filter((item) => isSameMonth(parseDate(item.date), now));
+    }
+
+    if (category && category !== 'all') {
+      filtered = filtered.filter((item) => item.category === category);
+    }
+
+    return filtered;
+  }
+
+  function handleExportExpensesCsv() {
+    const expenses = getFilteredExpenses();
+
+    if (!expenses.length) {
+      setMessage(els.expensesMessage, 'Нет расходов для экспорта.', 'error');
+      return;
+    }
+
+    const headers = ['Дата', 'Категория', 'Название', 'Сумма', 'Комментарий', 'relatedJobId'];
+    const rows = expenses.map((item) => [
+      formatDate(item.date),
+      item.category,
+      item.title,
+      String(item.amount),
+      item.comment,
+      item.relatedJobId
+    ]);
+
+    exportCsv(headers, rows, `expenses-${state.ui.expenseRange || 'all'}-${toInputDate(new Date())}.csv`);
+    setMessage(els.expensesMessage, 'CSV расходов сформирован.', 'success');
+  }
+
+  function renderClients() {
+    if (!state.clients.length) {
+      els.clientsList.innerHTML = '<div class="empty-state">Пока нет клиентов.</div>';
+      return;
+    }
+
+    els.clientsList.innerHTML = state.clients
+      .map((client) => `
+        <article class="client-item">
+          <div class="client-item-head">
+            <strong>${escapeHtml(client.name)}</strong>
+            <span>${escapeHtml(formatCurrency(client.totalAmount))}</span>
+          </div>
+          <div class="client-meta">
+            <div>${escapeHtml(client.phone)}</div>
+            <div>Заявок: ${escapeHtml(String(client.requestsCount))}</div>
+            <div>Чистая прибыль: ${escapeHtml(formatCurrency(client.totalNetProfit))}</div>
+          </div>
+        </article>
+      `)
+      .join('');
+  }
+
+  function handleExportClientsCsv() {
+    if (!state.clients.length) {
+      setMessage(els.clientsMessage, 'Нет клиентов для экспорта.', 'error');
+      return;
+    }
+
+    const headers = ['Имя', 'Телефон', 'Количество заявок', 'Общая сумма', 'Чистая прибыль'];
+    const rows = state.clients.map((client) => [
+      client.name,
+      client.phone,
+      String(client.requestsCount),
+      String(client.totalAmount),
+      String(client.totalNetProfit)
+    ]);
+
+    exportCsv(headers, rows, `clients-${toInputDate(new Date())}.csv`);
+    setMessage(els.clientsMessage, 'CSV клиентов сформирован.', 'success');
+  }
+
+  function deriveClients(jobs) {
     const map = new Map();
 
-    requests.forEach((request) => {
-      const normalizedPhone = normalizePhone(request.phone);
-      const key = normalizedPhone || request.name.toLowerCase();
+    jobs.forEach((job) => {
+      const key = normalizePhone(job.phone) || job.name.toLowerCase();
 
       if (!map.has(key)) {
         map.set(key, {
-          name: request.name,
-          phone: request.phone,
+          name: job.name,
+          phone: job.phone,
           requestsCount: 0,
-          totalAmount: 0
+          totalAmount: 0,
+          totalNetProfit: 0
         });
       }
 
       const client = map.get(key);
       client.requestsCount += 1;
-      client.totalAmount += request.amount;
+      client.totalAmount += job.amount;
+      client.totalNetProfit += job.jobNetProfit;
 
-      if (!client.name && request.name) {
-        client.name = request.name;
+      if (!client.name && job.name) {
+        client.name = job.name;
       }
-      if (!client.phone && request.phone) {
-        client.phone = request.phone;
+
+      if (!client.phone && job.phone) {
+        client.phone = job.phone;
       }
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
   }
 
-  function handleExportClientsCsv() {
-    const clients = aggregateClients(state.requests);
+  function populateExpenseJobOptions() {
+    const previousValue = els.expenseForm.elements.relatedJobId.value;
+    const sortedJobs = getSortedJobsByDate(state.jobs, 'desc').slice(0, 100);
 
-    if (!clients.length) {
-      setMessage(els.clientsMessage, 'Нет данных для экспорта CSV.', 'error');
-      return;
+    const options = ['<option value="">Без привязки</option>']
+      .concat(
+        sortedJobs.map((job) => `<option value="${escapeHtml(job.id)}">${escapeHtml(formatDate(job.date))} - ${escapeHtml(job.name)} - ${escapeHtml(formatCurrency(job.amount))}</option>`)
+      );
+
+    els.expenseRelatedJobId.innerHTML = options.join('');
+
+    if (previousValue && sortedJobs.some((job) => job.id === previousValue)) {
+      els.expenseForm.elements.relatedJobId.value = previousValue;
     }
-
-    const headers = ['Имя', 'Телефон', 'Количество заявок', 'Общая сумма'];
-    const rows = clients.map((client) => [
-      client.name,
-      client.phone,
-      String(client.requestsCount),
-      String(client.totalAmount)
-    ]);
-
-    exportCsv(headers, rows, `clients-${toInputDate(new Date())}.csv`);
-    setMessage(els.clientsMessage, 'CSV с клиентами сформирован.', 'success');
   }
 
-  function handleExportHistoryCsv() {
-    const history = getHistoryRequests();
+  function syncDerivedJobFields() {
+    const defaultFuelPrice = getCurrentFuelPriceNumber();
+    let changed = false;
 
-    if (!history.length) {
-      setMessage(els.historyMessage, 'Нет данных для экспорта по выбранному фильтру.', 'error');
-      return;
+    state.jobs = state.jobs.map((job) => {
+      const normalized = normalizeJob(job, defaultFuelPrice);
+      if (fingerprintJob(job) !== fingerprintJob(normalized)) {
+        changed = true;
+      }
+      return normalized;
+    });
+
+    if (changed) {
+      persistJobs();
     }
-
-    const headers = [
-      'Дата',
-      'Клиент',
-      'Телефон',
-      'Тип работ',
-      'Адрес',
-      'Часы',
-      'Сумма',
-      'Топливо (л)',
-      'Цена топлива',
-      'Стоимость топлива',
-      'Чистая прибыль',
-      'Статус'
-    ];
-
-    const rows = history.map((request) => [
-      formatDate(request.date),
-      request.name,
-      request.phone,
-      request.workType,
-      request.address,
-      formatHours(request.hours),
-      String(request.amount),
-      String(request.fuelLiters),
-      String(request.fuelPrice),
-      String(request.fuelCost),
-      String(request.profit),
-      request.status
-    ]);
-
-    exportCsv(headers, rows, `history-${state.historyRange}-${toInputDate(new Date())}.csv`);
-    setMessage(els.historyMessage, 'CSV по истории сформирован.', 'success');
   }
 
-  function exportCsv(headers, rows, fileName) {
-    const csvContent = [headers, ...rows]
-      .map((rowItems) => rowItems.map(csvEscape).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
+  function fingerprintJob(job) {
+    return [
+      job.id,
+      job.name,
+      job.phone,
+      job.date,
+      job.workType,
+      job.address,
+      job.hours,
+      job.amount,
+      job.fuelLiters,
+      job.fuelPrice,
+      job.fuelCost,
+      job.operatorRate,
+      job.operatorPay,
+      job.operatorPayMode,
+      job.jobNetProfit,
+      job.status,
+      job.createdAt
+    ].join('|');
   }
 
   async function refreshFuelPrice(forceRefresh) {
@@ -610,13 +961,19 @@
     for (const provider of fuelConfig.providers) {
       try {
         const result = await provider.getPrice();
-
         state.fuelCache = result;
         persistFuelCache();
+
         renderFuel(result.price, result.source, result.fetchedAt, false);
+
+        if (!els.jobForm.elements.fuelPrice.value) {
+          els.jobForm.elements.fuelPrice.value = String(result.price);
+          renderJobPreview();
+        }
+
         return;
       } catch (_error) {
-        // Пробуем следующий источник.
+        // Переход к следующему провайдеру.
       }
     }
 
@@ -627,7 +984,7 @@
     }
 
     els.fuelPrice.textContent = '-';
-    els.fuelMeta.textContent = 'Источник цены недоступен. Показан режим без актуальной цены.';
+    els.fuelMeta.textContent = 'Источник цены недоступен. Используется дефолтная цена 56 ₽/л.';
   }
 
   function renderFuel(price, source, fetchedAt, fromCache) {
@@ -635,83 +992,18 @@
     els.fuelMeta.textContent = `${fromCache ? 'Кэш' : 'Источник'}: ${source}. Обновлено: ${formatDateTime(fetchedAt)}.`;
   }
 
-  function renderFeatureFlags() {
-    els.featureFlags.textContent = `features = ${JSON.stringify(features, null, 2)}`;
+  function loadJobs(defaultFuelPrice) {
+    const stored = safeJsonParse(localStorage.getItem(STORAGE_KEYS.jobs), null);
+    const legacy = safeJsonParse(localStorage.getItem(STORAGE_KEYS.legacyJobs), null);
+
+    const source = Array.isArray(stored) ? stored : (Array.isArray(legacy) ? legacy : []);
+
+    return source
+      .map((raw) => normalizeJob(raw, defaultFuelPrice))
+      .filter((job) => job && isCoreJobValid(job));
   }
 
-  function syncDerivedRequestFields() {
-    const defaultFuelPrice = getCurrentFuelPriceNumber();
-    let hasChanges = false;
-
-    state.requests = state.requests.map((request) => {
-      const normalized = normalizeRequest(request, defaultFuelPrice);
-
-      if (requestFingerprint(request) !== requestFingerprint(normalized)) {
-        hasChanges = true;
-      }
-
-      return normalized;
-    });
-
-    if (hasChanges) {
-      persistRequests();
-    }
-  }
-
-  function requestFingerprint(request) {
-    return [
-      request.id,
-      request.name,
-      request.phone,
-      request.date,
-      request.workType,
-      request.address,
-      request.hours,
-      request.amount,
-      request.fuelLiters,
-      request.fuelPrice,
-      request.fuelCost,
-      request.profit,
-      request.status,
-      request.createdAt
-    ].join('|');
-  }
-
-  function getSortedRequestsByDate(requests, direction) {
-    const sign = direction === 'asc' ? 1 : -1;
-
-    return [...requests].sort((a, b) => {
-      const dateA = parseDate(a.date);
-      const dateB = parseDate(b.date);
-      const tsA = dateA ? dateA.getTime() : 0;
-      const tsB = dateB ? dateB.getTime() : 0;
-
-      if (tsA !== tsB) {
-        return (tsA - tsB) * sign;
-      }
-
-      const createdA = new Date(a.createdAt || 0).getTime();
-      const createdB = new Date(b.createdAt || 0).getTime();
-      return (createdA - createdB) * sign;
-    });
-  }
-
-  function loadRequests(defaultFuelPrice) {
-    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.requests), []);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .map((raw) => normalizeRequest(raw, defaultFuelPrice))
-      .filter((item) => item && isCoreRequestValid(item));
-  }
-
-  function persistRequests() {
-    localStorage.setItem(STORAGE_KEYS.requests, JSON.stringify(state.requests));
-  }
-
-  function normalizeRequest(raw, defaultFuelPrice) {
+  function normalizeJob(raw, defaultFuelPrice) {
     if (!raw || typeof raw !== 'object') {
       return null;
     }
@@ -719,21 +1011,31 @@
     const hours = toNonNegativeNumber(raw.hours);
     const amount = toNonNegativeNumber(raw.amount);
 
-    const optionalFuelLiters = toOptionalNonNegativeNumber(raw.fuelLiters);
-    const fuelLiters = Number.isFinite(optionalFuelLiters)
-      ? optionalFuelLiters
+    const fuelLiters = Number.isFinite(toOptionalNonNegativeNumber(raw.fuelLiters))
+      ? toOptionalNonNegativeNumber(raw.fuelLiters)
       : round2(hours * DEFAULT_FUEL_CONSUMPTION_PER_HOUR);
 
-    const optionalFuelPrice = toOptionalPositiveNumber(raw.fuelPrice);
-    const fuelPrice = Number.isFinite(optionalFuelPrice)
-      ? optionalFuelPrice
+    const fuelPrice = Number.isFinite(toOptionalPositiveNumber(raw.fuelPrice))
+      ? toOptionalPositiveNumber(raw.fuelPrice)
       : (Number.isFinite(defaultFuelPrice) && defaultFuelPrice > 0 ? defaultFuelPrice : DEFAULT_FUEL_PRICE);
 
     const fuelCost = round2(fuelLiters * fuelPrice);
-    const profit = round2(amount - fuelCost);
+
+    const operatorRate = Number.isFinite(toOptionalNonNegativeNumber(raw.operatorRate))
+      ? toOptionalNonNegativeNumber(raw.operatorRate)
+      : DEFAULT_OPERATOR_RATE;
+
+    const operatorPayMode = raw.operatorPayMode === OPERATOR_PAY_MODES.manual ? OPERATOR_PAY_MODES.manual : OPERATOR_PAY_MODES.auto;
+
+    const operatorPayRaw = toOptionalNonNegativeNumber(raw.operatorPay);
+    const operatorPay = operatorPayMode === OPERATOR_PAY_MODES.auto
+      ? round2(operatorRate * hours)
+      : round2(Number.isFinite(operatorPayRaw) ? operatorPayRaw : 0);
+
+    const jobNetProfit = round2(amount - fuelCost - operatorPay);
 
     return {
-      id: String(raw.id || createId()),
+      id: String(raw.id || createId('job')),
       name: String(raw.name || '').trim(),
       phone: String(raw.phone || '').trim(),
       date: String(raw.date || '').trim(),
@@ -741,36 +1043,67 @@
       address: String(raw.address || '').trim(),
       hours,
       amount,
+
       fuelLiters,
       fuelPrice,
       fuelCost,
-      profit,
+
+      operatorRate,
+      operatorPay,
+      operatorPayMode,
+
+      jobNetProfit,
       status: resolveStatus(raw.status, raw.date),
       createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
     };
   }
 
-  function resolveStatus(rawStatus, dateInput) {
-    if (isDateBeforeToday(dateInput)) {
-      return REQUEST_STATUSES.completed;
-    }
-
-    return rawStatus === REQUEST_STATUSES.completed ? REQUEST_STATUSES.completed : REQUEST_STATUSES.planned;
+  function isCoreJobValid(job) {
+    return Boolean(
+      job.name &&
+      job.phone &&
+      job.date &&
+      job.workType &&
+      job.address &&
+      Number.isFinite(job.hours) &&
+      Number.isFinite(job.amount)
+    );
   }
 
-  function isDateBeforeToday(dateInput) {
-    const date = parseDate(dateInput);
-    if (!date) {
-      return false;
+  function loadExpenses() {
+    const raw = safeJsonParse(localStorage.getItem(STORAGE_KEYS.expenses), []);
+    if (!Array.isArray(raw)) {
+      return [];
     }
 
-    const today = startOfLocalDay(new Date());
-    return date < today;
+    return raw
+      .map(normalizeExpense)
+      .filter((item) => item && isExpenseValid(item));
+  }
+
+  function normalizeExpense(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+
+    const category = EXPENSE_CATEGORIES.includes(String(raw.category || '').trim())
+      ? String(raw.category).trim()
+      : 'other';
+
+    return {
+      id: String(raw.id || createId('exp')),
+      date: String(raw.date || '').trim(),
+      category,
+      title: String(raw.title || '').trim(),
+      amount: round2(toNonNegativeNumber(raw.amount)),
+      relatedJobId: String(raw.relatedJobId || '').trim(),
+      comment: String(raw.comment || '').trim(),
+      createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
+    };
   }
 
   function loadFuelCache() {
     const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.fuel), null);
-
     if (!parsed || typeof parsed !== 'object') {
       return null;
     }
@@ -786,12 +1119,46 @@
     };
   }
 
-  function persistFuelCache() {
-    if (!state.fuelCache) {
-      return;
+  function loadUiState() {
+    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.ui), null);
+
+    if (!parsed || typeof parsed !== 'object') {
+      return {
+        section: 'dashboard',
+        historyRange: 'all',
+        expenseRange: 'all',
+        expenseCategory: 'all'
+      };
     }
 
-    localStorage.setItem(STORAGE_KEYS.fuel, JSON.stringify(state.fuelCache));
+    return {
+      section: getValidSection(parsed.section),
+      historyRange: String(parsed.historyRange || 'all'),
+      expenseRange: String(parsed.expenseRange || 'all'),
+      expenseCategory: String(parsed.expenseCategory || 'all')
+    };
+  }
+
+  function persistJobs() {
+    localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(state.jobs));
+  }
+
+  function persistClients() {
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(state.clients));
+  }
+
+  function persistExpenses() {
+    localStorage.setItem(STORAGE_KEYS.expenses, JSON.stringify(state.expenses));
+  }
+
+  function persistFuelCache() {
+    if (state.fuelCache) {
+      localStorage.setItem(STORAGE_KEYS.fuel, JSON.stringify(state.fuelCache));
+    }
+  }
+
+  function persistUiState() {
+    localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify(state.ui));
   }
 
   function getCurrentFuelPriceNumber() {
@@ -799,6 +1166,73 @@
       return state.fuelCache.price;
     }
     return DEFAULT_FUEL_PRICE;
+  }
+
+  function getSortedJobsByDate(jobs, direction) {
+    const factor = direction === 'asc' ? 1 : -1;
+
+    return [...jobs].sort((a, b) => {
+      const dateA = parseDate(a.date);
+      const dateB = parseDate(b.date);
+      const tsA = dateA ? dateA.getTime() : 0;
+      const tsB = dateB ? dateB.getTime() : 0;
+
+      if (tsA !== tsB) {
+        return (tsA - tsB) * factor;
+      }
+
+      const createdA = new Date(a.createdAt || 0).getTime();
+      const createdB = new Date(b.createdAt || 0).getTime();
+      return (createdA - createdB) * factor;
+    });
+  }
+
+  function resolveStatus(rawStatus, dateInput) {
+    if (isDateBeforeToday(dateInput)) {
+      return STATUSES.completed;
+    }
+
+    return rawStatus === STATUSES.completed ? STATUSES.completed : STATUSES.planned;
+  }
+
+  function isDateBeforeToday(dateInput) {
+    const date = parseDate(dateInput);
+    if (!date) {
+      return false;
+    }
+
+    const today = startOfLocalDay(new Date());
+    return date < today;
+  }
+
+  function filterByCategory(items, category) {
+    return items.filter((item) => item.category === category);
+  }
+
+  function sumBy(items, field) {
+    return round2(items.reduce((sum, item) => sum + toNonNegativeNumber(item[field]), 0));
+  }
+
+  function sumAmount(items) {
+    return round2(items.reduce((sum, item) => sum + toNonNegativeNumber(item.amount), 0));
+  }
+
+  function exportCsv(headers, rows, fileName) {
+    const csv = [headers, ...rows]
+      .map((row) => row.map(csvEscape).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
   }
 
   function safeJsonParse(value, fallback) {
@@ -813,19 +1247,12 @@
     }
   }
 
-  function createId() {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-      return window.crypto.randomUUID();
-    }
-    return `req-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-  }
-
-  function parseDate(dateInput) {
-    if (!dateInput) {
+  function parseDate(input) {
+    if (!input) {
       return null;
     }
 
-    const date = new Date(`${dateInput}T00:00:00`);
+    const date = new Date(`${input}T00:00:00`);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
@@ -852,8 +1279,8 @@
     return `${year}-${month}-${day}`;
   }
 
-  function formatDate(dateInput) {
-    const date = parseDate(dateInput);
+  function formatDate(input) {
+    const date = parseDate(input);
     if (!date) {
       return '-';
     }
@@ -861,8 +1288,8 @@
     return new Intl.DateTimeFormat('ru-RU').format(date);
   }
 
-  function formatLongDate(dateInput) {
-    const date = parseDate(dateInput);
+  function formatLongDate(input) {
+    const date = parseDate(input);
     if (!date) {
       return '-';
     }
@@ -912,24 +1339,6 @@
     return String(phone || '').replace(/\D/g, '');
   }
 
-  function csvEscape(value) {
-    const escaped = String(value ?? '').replace(/"/g, '""');
-    return `"${escaped}"`;
-  }
-
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function getMinutesDiff(from, to) {
-    return Math.abs((to.getTime() - from.getTime()) / 60000);
-  }
-
   function toNonNegativeNumber(value) {
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0) {
@@ -968,7 +1377,42 @@
     return Math.round(Number(value) * 100) / 100;
   }
 
-  // --- Провайдеры цены топлива (расширяемая архитектура) ---
+  function createId(prefix) {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return `${prefix}_${window.crypto.randomUUID()}`;
+    }
+    return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  }
+
+  function csvEscape(value) {
+    return `"${String(value ?? '').replace(/"/g, '""')}"`;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function setMessage(element, text, type) {
+    if (!element) {
+      return;
+    }
+
+    element.textContent = text || '';
+    element.classList.remove('success', 'error');
+
+    if (type) {
+      element.classList.add(type);
+    }
+  }
+
+  function getMinutesDiff(from, to) {
+    return Math.abs((to.getTime() - from.getTime()) / 60000);
+  }
 
   function DriffFuelProvider({ label, urls }) {
     this.label = label;
@@ -1002,7 +1446,7 @@
           fetchedAt: new Date().toISOString()
         };
       } catch (_error) {
-        // Пробуем следующий прокси-источник.
+        // fallback to next url
       }
     }
 
@@ -1022,12 +1466,12 @@
       .replace(/&nbsp;/gi, ' ')
       .replace(/\s+/g, ' ');
 
-    const keywordPatterns = [
+    const patterns = [
       /(?:дт|дизел[ья])[^0-9]{0,80}(\d{2,3}(?:[\.,]\d{1,2})?)/i,
       /(?:цена|стоимост[ьи]|средн\w*)[^0-9]{0,80}(\d{2,3}(?:[\.,]\d{1,2})?)/i
     ];
 
-    for (const pattern of keywordPatterns) {
+    for (const pattern of patterns) {
       const match = plain.match(pattern) || raw.match(pattern);
       if (match && match[1]) {
         const value = toFuelNumber(match[1]);
@@ -1037,28 +1481,21 @@
       }
     }
 
-    const currencyMatches = Array.from(raw.matchAll(/(\d{2,3}(?:[\.,]\d{1,2})?)\s*(?:₽|руб)/gi)).map((item) => item[1]);
-    const jsonMatches = Array.from(raw.matchAll(/"(?:price|value|cost)"\s*:\s*"?(\d{2,3}(?:[\.,]\d{1,2})?)/gi)).map((item) => item[1]);
-    const genericMatches = Array.from(plain.matchAll(/\b(\d{2,3}(?:[\.,]\d{1,2})?)\b/g)).map((item) => item[1]);
-
-    return pickPlausibleFuelPrice([...currencyMatches, ...jsonMatches, ...genericMatches]);
+    const candidates = Array.from(raw.matchAll(/(\d{2,3}(?:[\.,]\d{1,2})?)\s*(?:₽|руб)/gi)).map((m) => m[1]);
+    return pickPlausibleFuelPrice(candidates);
   }
 
   function pickPlausibleFuelPrice(values) {
-    const normalized = values
+    const numbers = values
       .map(toFuelNumber)
       .filter((value) => Number.isFinite(value) && value >= 35 && value <= 120);
 
-    if (!normalized.length) {
+    if (!numbers.length) {
       return null;
     }
 
-    const decimalValues = normalized.filter((value) => !Number.isInteger(value));
-    const pool = decimalValues.length ? decimalValues : normalized;
-    const sample = pool.slice(-7);
-    const avg = sample.reduce((sum, value) => sum + value, 0) / sample.length;
-
-    return Number(avg.toFixed(2));
+    const last = numbers[numbers.length - 1];
+    return Number(last.toFixed(2));
   }
 
   function toFuelNumber(input) {

@@ -4,684 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>VOLVO BL71B CRM</title>
-  <style>
-:root {
-  --bg-0: #17191e;
-  --bg-1: #21242b;
-  --bg-2: #2b2f37;
-  --steel: #474a51;
-  --text-main: #f3f4f6;
-  --text-muted: #b8bdc8;
-  --text-dark: #171a1f;
-  --accent: #f2c400;
-  --accent-2: #d9ae00;
-  --surface-light: #f3f4f5;
-  --surface-light-2: #e8eaee;
-  --ok: #0d7a43;
-  --error: #a51d1d;
-  --radius-xl: 20px;
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --shadow-strong: 0 18px 35px rgba(0, 0, 0, 0.35);
-  --shadow-soft: 0 8px 18px rgba(0, 0, 0, 0.25);
-  --hero-image: url('https://i.wfolio.ru/x/zRtfFZRdtTOs46O4TlAmB7Xb9GUzndU3/UgFgLXtG2pYDnmAimVi3qPU0Z97c0sWw/ADHG39pwGqUkVOUV-6NX7lTqRVyNU2St/1eWPVnS6XBqRQSe-QHIvxa8IaW_NdyQP/_3OdZJKnzqn448mwgQZSsg.jpg');
-  --next-image: url('https://i.wfolio.ru/x/zRtfFZRdtTOs46O4TlAmB7Xb9GUzndU3/UgFgLXtG2pYDnmAimVi3qPU0Z97c0sWw/ADHG39pwGqUkVOUV-6NX7lTqRVyNU2St/1eWPVnS6XBqRQSe-QHIvxa8IaW_NdyQP/_3OdZJKnzqn448mwgQZSsg.jpg');
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  width: 100%;
-  min-height: 100%;
-}
-
-body {
-  font-family: "Segoe UI", "Arial", sans-serif;
-  background:
-    radial-gradient(circle at 10% -15%, #3b3f49 0%, transparent 40%),
-    radial-gradient(circle at 100% 120%, #2e323a 0%, transparent 45%),
-    linear-gradient(180deg, #1e2128 0%, #16181d 100%);
-  color: var(--text-main);
-}
-
-h1,
-h2,
-h3,
-p,
-pre {
-  margin: 0;
-}
-
-button,
-input {
-  font: inherit;
-}
-
-.mobile-app {
-  width: min(100%, 430px);
-  min-height: 100dvh;
-  margin: 0 auto;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 20%),
-    linear-gradient(180deg, #22252c 0%, #1a1d23 100%);
-  position: relative;
-  box-shadow: var(--shadow-strong);
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background:
-    linear-gradient(180deg, rgba(12, 13, 16, 0.93) 0%, rgba(30, 33, 39, 0.96) 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 14px 16px 12px;
-}
-
-.brand-line {
-  width: 62%;
-  height: 3px;
-  border-radius: 999px;
-  margin-bottom: 10px;
-  background: linear-gradient(90deg, var(--accent) 0%, rgba(242, 196, 0, 0.1) 100%);
-}
-
-.topbar-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.brand-title {
-  font-size: 2rem;
-  line-height: 1;
-  letter-spacing: 0.5px;
-  font-weight: 900;
-}
-
-.brand-title span {
-  color: var(--accent);
-}
-
-.icon-status {
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.icon-status span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(242, 196, 0, 0.2);
-}
-
-.app-main {
-  padding: 12px 12px 108px;
-}
-
-.section {
-  display: none;
-}
-
-.section.active {
-  display: block;
-}
-
-.hero-card {
-  background: #30343c;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
-}
-
-.hero-image {
-  min-height: 252px;
-  background:
-    linear-gradient(180deg, rgba(15, 17, 21, 0.12) 0%, rgba(15, 17, 21, 0.5) 100%),
-    var(--hero-image) center 44% / cover no-repeat,
-    linear-gradient(135deg, #555a63 0%, #353941 100%);
-}
-
-.stats-grid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.stat-card {
-  border-radius: 14px;
-  padding: 12px;
-  min-height: 92px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--shadow-soft);
-}
-
-.stat-card p {
-  font-size: 0.88rem;
-  line-height: 1.15;
-}
-
-.stat-card strong {
-  font-size: 2rem;
-  line-height: 1;
-  font-weight: 900;
-}
-
-.stat-card-accent {
-  background: linear-gradient(180deg, #f4cb1d 0%, #e9bb05 100%);
-  color: var(--text-dark);
-}
-
-.stat-card-dark {
-  background: linear-gradient(180deg, #3f434b 0%, #333740 100%);
-  color: var(--text-main);
-}
-
-.stat-card-dark p {
-  color: #dde1e8;
-}
-
-.economics-grid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.profit-card,
-.performance-card {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: var(--shadow-soft);
-}
-
-.profit-card {
-  padding: 12px;
-  background: linear-gradient(180deg, #f3cb20 0%, #e4b402 100%);
-  color: #161b23;
-}
-
-.profit-card p {
-  font-size: 0.9rem;
-}
-
-.profit-card strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 2rem;
-  font-weight: 900;
-}
-
-.performance-card {
-  background: linear-gradient(180deg, #414751 0%, #343943 100%);
-  padding: 12px;
-}
-
-.performance-card h3 {
-  font-size: 1rem;
-  margin-bottom: 8px;
-}
-
-.perf-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 3px;
-  font-size: 0.92rem;
-}
-
-.perf-row span {
-  color: var(--text-muted);
-}
-
-.perf-bars {
-  margin-top: 8px;
-  display: grid;
-  gap: 6px;
-}
-
-.perf-bar {
-  display: grid;
-  gap: 4px;
-}
-
-.perf-bar span {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-
-.perf-bar b {
-  height: 6px;
-  border-radius: 999px;
-  display: block;
-  width: 0;
-  background: linear-gradient(90deg, #f6cf24 0%, #e4b201 100%);
-  transition: width 0.25s ease;
-}
-
-.perf-bar-fuel b {
-  background: linear-gradient(90deg, #8f98a8 0%, #c8cfdd 100%);
-}
-
-.next-job-card,
-.works-panel,
-.clients-shell,
-.history-shell {
-  margin-top: 10px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, #3a3f49 0%, #2f343d 100%);
-  box-shadow: var(--shadow-soft);
-  overflow: hidden;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  background: linear-gradient(180deg, #434953 0%, #363b44 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.panel-header-compact {
-  border-bottom: none;
-}
-
-.panel-header h2 {
-  font-size: 1.28rem;
-  font-weight: 800;
-}
-
-.panel-arrow {
-  font-size: 1.6rem;
-  color: var(--accent);
-}
-
-.empty-state {
-  color: var(--text-muted);
-  padding: 14px 12px;
-}
-
-.next-job-content {
-  background:
-    linear-gradient(115deg, rgba(243, 244, 245, 0.98) 0%, rgba(243, 244, 245, 0.93) 64%, rgba(243, 244, 245, 0.75) 100%),
-    var(--next-image) 130% center / 62% auto no-repeat,
-    linear-gradient(180deg, #f3f4f5 0%, #eceef1 100%);
-  color: #1f2430;
-  padding: 14px 12px;
-}
-
-.next-job-main {
-  display: grid;
-  gap: 4px;
-  max-width: 68%;
-}
-
-.next-job-name {
-  font-size: 1.72rem;
-  line-height: 1;
-  font-weight: 900;
-}
-
-.next-job-date {
-  font-size: 1.2rem;
-  line-height: 1.1;
-  font-weight: 700;
-}
-
-.next-job-type,
-.next-job-address {
-  font-size: 1rem;
-  line-height: 1.2;
-  font-weight: 500;
-}
-
-.next-job-footer {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid rgba(31, 36, 48, 0.2);
-  padding-top: 8px;
-  font-size: 1.15rem;
-  font-weight: 800;
-}
-
-.fuel-strip {
-  margin-top: 10px;
-  border-radius: 14px;
-  padding: 10px 12px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-  background: linear-gradient(180deg, #3c414a 0%, #323740 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.fuel-icon {
-  font-size: 1.05rem;
-}
-
-.fuel-text p {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.fuel-text strong {
-  font-size: 1.35rem;
-  color: var(--text-main);
-}
-
-.fuel-refresh {
-  border: 0;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #181b20;
-  font-weight: 800;
-  padding: 8px 10px;
-  min-height: 38px;
-}
-
-.fuel-meta {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin: 6px 4px 0;
-}
-
-.works-list,
-.clients-list {
-  padding: 0 12px 12px;
-  display: grid;
-  gap: 8px;
-}
-
-.work-item,
-.client-item {
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, #40454f 0%, #353a44 100%);
-  padding: 10px;
-}
-
-.work-item-head,
-.client-item-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.work-item-head strong,
-.client-item-head strong {
-  font-size: 1.05rem;
-}
-
-.work-meta,
-.client-meta {
-  display: grid;
-  gap: 3px;
-  font-size: 0.9rem;
-  color: #d4d8df;
-}
-
-.work-tags,
-.client-tags {
-  margin-top: 8px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.tag {
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 0.83rem;
-  font-weight: 700;
-  background: rgba(242, 196, 0, 0.16);
-  border: 1px solid rgba(242, 196, 0, 0.5);
-  color: #ffdf62;
-}
-
-.tag-light {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #e6e9ef;
-}
-
-.history-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 10px 12px;
-}
-
-.history-filter-btn {
-  min-height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: #d9dee7;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.history-filter-btn.active {
-  background: linear-gradient(180deg, #f4cb1f 0%, #e3b301 100%);
-  color: #151a21;
-  border-color: #e4b402;
-}
-
-.history-table-wrap {
-  overflow-x: auto;
-  padding: 0 12px 10px;
-}
-
-.history-table {
-  width: 100%;
-  min-width: 980px;
-  border-collapse: collapse;
-  font-size: 0.86rem;
-}
-
-.history-table th,
-.history-table td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 9px 8px;
-  text-align: left;
-  vertical-align: top;
-}
-
-.history-table th {
-  color: #cbd2df;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.history-status {
-  display: inline-block;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.history-status-planned {
-  background: rgba(242, 196, 0, 0.2);
-  color: #ffe168;
-  border: 1px solid rgba(242, 196, 0, 0.55);
-}
-
-.history-status-completed {
-  background: rgba(49, 180, 106, 0.18);
-  color: #96f0bf;
-  border: 1px solid rgba(67, 198, 125, 0.45);
-}
-
-.repeat-btn {
-  border: 1px solid rgba(242, 196, 0, 0.6);
-  background: rgba(242, 196, 0, 0.15);
-  color: #ffe57f;
-  border-radius: 8px;
-  min-height: 30px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.form-shell {
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, #373b43 0%, #30343c 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: var(--shadow-soft);
-  padding: 10px;
-}
-
-.form-shell h2 {
-  color: #f6f8fc;
-  font-size: 2rem;
-  margin: 4px 6px 10px;
-}
-
-.request-form {
-  background: linear-gradient(180deg, #f5f6f8 0%, #eceff3 100%);
-  border-radius: 14px;
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.request-form label {
-  display: grid;
-  gap: 5px;
-  color: #1e232c;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.request-form input {
-  width: 100%;
-  min-height: 50px;
-  border-radius: 12px;
-  border: 1px solid #cfd4dd;
-  padding: 12px;
-  background: #fff;
-  color: #1d222b;
-  font-size: 1.02rem;
-}
-
-.request-form input:focus {
-  outline: none;
-  border-color: #d0a806;
-  box-shadow: 0 0 0 3px rgba(242, 196, 0, 0.25);
-}
-
-.cta-btn {
-  margin-top: 2px;
-  min-height: 56px;
-  border-radius: 14px;
-  border: 0;
-  background: linear-gradient(180deg, #f5cc1f 0%, #e9b803 100%);
-  color: #141920;
-  font-size: 1.85rem;
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 10px 16px rgba(0, 0, 0, 0.22);
-}
-
-.form-message {
-  min-height: 1.25em;
-  margin: 8px 6px 2px;
-  font-size: 0.92rem;
-}
-
-.form-message.success {
-  color: #8ff0b8;
-}
-
-.form-message.error {
-  color: #ff9898;
-}
-
-.clients-shell {
-  padding-bottom: 12px;
-}
-
-.export-btn {
-  border: 1px solid rgba(242, 196, 0, 0.6);
-  color: #ffe484;
-  background: rgba(242, 196, 0, 0.15);
-  border-radius: 10px;
-  min-height: 36px;
-  padding: 6px 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.bottom-nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: min(100%, 430px);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  background: linear-gradient(180deg, #2b2f37 0%, #232730 100%);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 50;
-}
-
-.bottom-nav-btn {
-  border: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: transparent;
-  color: #d0d4dd;
-  min-height: 62px;
-  padding: 10px 4px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.bottom-nav-btn:last-child {
-  border-right: 0;
-}
-
-.bottom-nav-btn.active {
-  background: linear-gradient(180deg, #f5cc20 0%, #e2b301 100%);
-  color: #131921;
-}
-
-@media (min-width: 431px) {
-  .mobile-app {
-    border-left: 1px solid rgba(255, 255, 255, 0.15);
-    border-right: 1px solid rgba(255, 255, 255, 0.15);
-  }
-}
-
-
-
-</style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="mobile-app">
@@ -689,9 +12,7 @@ input {
       <div class="brand-line"></div>
       <div class="topbar-row">
         <h1 class="brand-title">VOLVO <span>BL71B</span></h1>
-        <button class="icon-status" type="button" aria-label="Статус">
-          <span></span>
-        </button>
+        <button class="icon-status" type="button" aria-label="Статус"><span></span></button>
       </div>
     </header>
 
@@ -701,53 +22,51 @@ input {
           <div class="hero-image" role="img" aria-label="Экскаватор-погрузчик Volvo"></div>
         </article>
 
-        <div class="stats-grid">
-          <article class="stat-card stat-card-accent">
+        <div class="kpi-grid">
+          <article class="kpi-card kpi-card-accent">
             <p>Сегодня часов</p>
-            <strong id="todayHours">0</strong>
+            <strong id="todayHoursCard">0</strong>
           </article>
-          <article class="stat-card stat-card-dark">
-            <p>Сегодня денег</p>
-            <strong id="todayAmount">0 ₽</strong>
+          <article class="kpi-card kpi-card-dark">
+            <p>Сегодня выручка</p>
+            <strong id="todayRevenueCard">0 ₽</strong>
           </article>
-          <article class="stat-card stat-card-accent">
-            <p>За месяц часов</p>
-            <strong id="monthHours">0</strong>
+          <article class="kpi-card kpi-card-dark">
+            <p>Сегодня расходы</p>
+            <strong id="todayExpensesCard">0 ₽</strong>
           </article>
-          <article class="stat-card stat-card-dark">
-            <p>За месяц денег</p>
-            <strong id="monthAmount">0 ₽</strong>
-          </article>
-        </div>
-
-        <div class="economics-grid">
-          <article class="profit-card">
-            <p>Чистая прибыль сегодня</p>
-            <strong id="todayProfit">0 ₽</strong>
-          </article>
-
-          <article class="performance-card">
-            <h3>Сегодня</h3>
-            <div class="perf-row"><span>Часы</span><strong id="perfHours">0</strong></div>
-            <div class="perf-row"><span>Выручка</span><strong id="perfRevenue">0 ₽</strong></div>
-            <div class="perf-row"><span>Топливо</span><strong id="perfFuel">0 л</strong></div>
-            <div class="perf-bars" aria-hidden="true">
-              <div class="perf-bar">
-                <span>Выручка</span>
-                <b id="perfRevenueFill"></b>
-              </div>
-              <div class="perf-bar perf-bar-fuel">
-                <span>Топливо</span>
-                <b id="perfFuelFill"></b>
-              </div>
-            </div>
+          <article class="kpi-card kpi-card-accent">
+            <p>Сегодня чистая прибыль</p>
+            <strong id="todayNetCard">0 ₽</strong>
           </article>
         </div>
 
-        <article class="next-job-card">
-          <div class="panel-header">
+        <article class="panel compact-panel">
+          <h2>Оперативно за сегодня</h2>
+          <div class="split-metrics">
+            <div><span>Топливо</span><strong id="todayFuelCost">0 ₽</strong></div>
+            <div><span>Машинист</span><strong id="todayOperatorCost">0 ₽</strong></div>
+            <div><span>Ремонт + запчасти (месяц)</span><strong id="monthRepairParts">0 ₽</strong></div>
+          </div>
+        </article>
+
+        <article class="panel compact-panel">
+          <h2>Сводная экономика месяца</h2>
+          <div class="economy-list">
+            <div><span>Выручка</span><strong id="monthIncome">0 ₽</strong></div>
+            <div><span>Топливо</span><strong id="monthFuel">0 ₽</strong></div>
+            <div><span>Машинист</span><strong id="monthOperator">0 ₽</strong></div>
+            <div><span>Ремонт</span><strong id="monthRepair">0 ₽</strong></div>
+            <div><span>Запчасти</span><strong id="monthParts">0 ₽</strong></div>
+            <div><span>Прочее</span><strong id="monthOther">0 ₽</strong></div>
+            <div class="economy-total"><span>Чистая прибыль</span><strong id="monthNet">0 ₽</strong></div>
+          </div>
+        </article>
+
+        <article class="panel next-job-panel">
+          <div class="panel-head">
             <h2>Следующая заявка</h2>
-            <span class="panel-arrow">→</span>
+            <span>→</span>
           </div>
           <div id="nextJob" class="empty-state">Пока нет будущих заявок.</div>
         </article>
@@ -761,109 +80,143 @@ input {
           <button id="refreshFuelBtn" type="button" class="fuel-refresh">Обновить</button>
         </article>
         <p id="fuelMeta" class="fuel-meta">Загрузка данных...</p>
+      </section>
 
-        <article class="works-panel">
-          <div class="panel-header panel-header-compact">
-            <h2>Последние работы</h2>
-          </div>
-          <div id="worksList" class="works-list"></div>
-        </article></section>
-
-      <section class="section" id="add-request">
+      <section class="section" id="add-job">
         <article class="form-shell">
           <h2>Новая заявка</h2>
+          <form id="jobForm" class="job-form">
+            <label>Имя<input type="text" name="name" required placeholder="Петр Иванов"></label>
+            <label>Телефон<input type="tel" name="phone" required placeholder="+7 923 765-43-21"></label>
+            <label>Дата<input type="date" name="date" required></label>
+            <label>Тип работ<input type="text" name="workType" required placeholder="Планировка участка"></label>
+            <label>Адрес<input type="text" name="address" required placeholder="д. Зеленово, ул. Лесная, 6"></label>
+            <label>Часы работы<input type="number" name="hours" min="0" step="0.5" required placeholder="6"></label>
+            <label>Сумма<input type="number" name="amount" min="0" step="1" required placeholder="30000"></label>
 
-          <form id="requestForm" class="request-form">
-            <label>
-              Имя
-              <input type="text" name="name" required placeholder="Петр Иванов">
+            <label>Топливо, л<input type="number" name="fuelLiters" min="0" step="0.1" placeholder="Если пусто: часы × 10"></label>
+            <label>Цена топлива, ₽/л<input type="number" name="fuelPrice" min="0" step="0.01" placeholder="По умолчанию из виджета"></label>
+            <label>Ставка машиниста, ₽/ч<input type="number" name="operatorRate" min="0" step="1" placeholder="1000"></label>
+
+            <label>Режим оплаты машиниста
+              <select name="operatorPayMode" id="operatorPayMode">
+                <option value="auto">auto (ставка × часы)</option>
+                <option value="manual">manual (вручную)</option>
+              </select>
             </label>
 
-            <label>
-              Телефон
-              <input type="tel" name="phone" required placeholder="+7 923 765-43-21">
-            </label>
+            <label id="operatorPayWrap" class="hidden">Зарплата машиниста, ₽<input type="number" name="operatorPay" min="0" step="1" placeholder="15000"></label>
 
-            <label>
-              Дата
-              <input type="date" name="date" required>
-            </label>
-
-            <label>
-              Тип работ
-              <input type="text" name="workType" required placeholder="Планировка участка">
-            </label>
-
-            <label>
-              Адрес
-              <input type="text" name="address" required placeholder="д. Зеленово, ул. Лесная, 6">
-            </label>
-
-            <label>
-              Часы работы
-              <input type="number" name="hours" min="0" step="0.5" required placeholder="6">
-            </label>
-
-            <label>
-              Сумма
-              <input type="number" name="amount" min="0" step="1" required placeholder="30000">
-            </label>
-
-            <label>
-              Топливо (литры)
-              <input type="number" name="fuelLiters" min="0" step="0.1" placeholder="Если пусто, посчитается автоматически">
-            </label>
+            <div class="calc-preview">
+              <div><span>Топливо, ₽</span><strong id="previewFuelCost">0 ₽</strong></div>
+              <div><span>Машинист, ₽</span><strong id="previewOperatorPay">0 ₽</strong></div>
+              <div><span>Прибыль по заявке, ₽</span><strong id="previewNetProfit">0 ₽</strong></div>
+            </div>
 
             <button type="submit" class="cta-btn">Добавить заявку</button>
           </form>
-
-          <p id="formMessage" class="form-message" aria-live="polite"></p>
+          <p id="jobFormMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
 
       <section class="section" id="history">
-        <article class="history-shell">
-          <div class="panel-header">
+        <article class="panel">
+          <div class="panel-head panel-head-wrap">
             <h2>История работ</h2>
             <button id="exportHistoryCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
           </div>
 
-          <div class="history-filters" id="historyFilters">
-            <button type="button" class="history-filter-btn" data-range="today">Сегодня</button>
-            <button type="button" class="history-filter-btn" data-range="week">Неделя</button>
-            <button type="button" class="history-filter-btn" data-range="month">Месяц</button>
-            <button type="button" class="history-filter-btn active" data-range="all">Все</button>
+          <div class="filters-row" id="historyRangeFilters">
+            <button type="button" class="filter-btn" data-range="today">Сегодня</button>
+            <button type="button" class="filter-btn" data-range="week">Неделя</button>
+            <button type="button" class="filter-btn" data-range="month">Месяц</button>
+            <button type="button" class="filter-btn active" data-range="all">Все</button>
           </div>
 
-          <div class="history-table-wrap">
+          <div class="table-wrap">
             <table class="history-table">
               <thead>
                 <tr>
-                  <th>Дата</th>
-                  <th>Клиент</th>
-                  <th>Телефон</th>
-                  <th>Тип работ</th>
-                  <th>Адрес</th>
-                  <th>Часы</th>
-                  <th>Сумма</th>
-                  <th>Топливо (л)</th>
-                  <th>Статус</th>
-                  <th>Действие</th>
+                  <th>Дата</th><th>Клиент</th><th>Телефон</th><th>Тип работ</th><th>Адрес</th><th>Часы</th><th>Сумма</th><th>Топливо, ₽</th><th>Машинист, ₽</th><th>Прибыль, ₽</th><th>Статус</th><th>Действие</th>
                 </tr>
               </thead>
               <tbody id="historyTableBody"></tbody>
             </table>
           </div>
-
           <p id="historyMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
 
+      <section class="section" id="expenses">
+        <article class="form-shell expense-form-shell">
+          <h2>Расходы</h2>
+          <form id="expenseForm" class="job-form">
+            <input type="hidden" name="expenseId" value="">
+            <label>Дата<input type="date" name="date" required></label>
+            <label>Категория
+              <select name="category" required>
+                <option value="repair">repair</option>
+                <option value="parts">parts</option>
+                <option value="fuel">fuel</option>
+                <option value="operator">operator</option>
+                <option value="other">other</option>
+              </select>
+            </label>
+            <label>Название<input type="text" name="title" required placeholder="Ремонт гидравлики"></label>
+            <label>Сумма, ₽<input type="number" name="amount" min="0" step="1" required placeholder="12000"></label>
+            <label>Связанная заявка
+              <select name="relatedJobId" id="expenseRelatedJobId">
+                <option value="">Без привязки</option>
+              </select>
+            </label>
+            <label>Комментарий<input type="text" name="comment" placeholder="Доставка + установка"></label>
+
+            <div class="form-actions">
+              <button type="submit" class="cta-btn small">Сохранить расход</button>
+              <button type="button" id="cancelExpenseEditBtn" class="ghost-btn hidden">Отмена редактирования</button>
+            </div>
+          </form>
+          <p id="expenseFormMessage" class="form-message" aria-live="polite"></p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head panel-head-wrap">
+            <h2>Журнал расходов</h2>
+            <button id="exportExpensesCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
+          </div>
+
+          <div class="filters-row" id="expenseRangeFilters">
+            <button type="button" class="filter-btn" data-range="today">Сегодня</button>
+            <button type="button" class="filter-btn" data-range="month">Месяц</button>
+            <button type="button" class="filter-btn active" data-range="all">Все</button>
+          </div>
+
+          <div class="filters-row categories" id="expenseCategoryFilters">
+            <button type="button" class="filter-btn active" data-category="all">all</button>
+            <button type="button" class="filter-btn" data-category="repair">repair</button>
+            <button type="button" class="filter-btn" data-category="parts">parts</button>
+            <button type="button" class="filter-btn" data-category="fuel">fuel</button>
+            <button type="button" class="filter-btn" data-category="operator">operator</button>
+            <button type="button" class="filter-btn" data-category="other">other</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="expenses-table">
+              <thead>
+                <tr><th>Дата</th><th>Категория</th><th>Название</th><th>Сумма</th><th>Комментарий</th><th>Действие</th></tr>
+              </thead>
+              <tbody id="expensesTableBody"></tbody>
+            </table>
+          </div>
+          <p id="expensesMessage" class="form-message" aria-live="polite"></p>
+        </article>
+      </section>
+
       <section class="section" id="clients">
-        <article class="clients-shell">
-          <div class="panel-header">
+        <article class="panel">
+          <div class="panel-head panel-head-wrap">
             <h2>Клиенты</h2>
-            <button id="exportCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
+            <button id="exportClientsCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
           </div>
           <div id="clientsList" class="clients-list"></div>
           <p id="clientsMessage" class="form-message" aria-live="polite"></p>
@@ -873,1116 +226,13 @@ input {
 
     <nav class="bottom-nav" aria-label="Нижняя навигация">
       <button class="bottom-nav-btn active" type="button" data-section="dashboard">Главная</button>
-      <button class="bottom-nav-btn" type="button" data-section="add-request">Добавить</button>
+      <button class="bottom-nav-btn" type="button" data-section="add-job">Заявка</button>
       <button class="bottom-nav-btn" type="button" data-section="history">История</button>
+      <button class="bottom-nav-btn" type="button" data-section="expenses">Расходы</button>
       <button class="bottom-nav-btn" type="button" data-section="clients">Клиенты</button>
     </nav>
   </div>
 
-  <script>
-(() => {
-  'use strict';
-
-  const STORAGE_KEYS = {
-    requests: 'mini_crm_requests_v1',
-    fuel: 'mini_crm_fuel_cache_v1'
-  };
-
-  const DEFAULT_FUEL_CONSUMPTION_PER_HOUR = 10;
-  const DEFAULT_FUEL_PRICE = 56;
-
-  const REQUEST_STATUSES = {
-    planned: 'planned',
-    completed: 'completed'
-  };
-
-  // Фичи для будущего роста CRM. Логика не меняется.
-  const features = {
-    machines: false,
-    employees: false,
-    marketing: false,
-    payments: false
-  };
-
-  const DRIFF_DT_SPB_URL = 'https://driff.ru/fuel-dynamics/dt/sankt-peterburg/';
-  const DRIFF_PROXY_URLS = [
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(DRIFF_DT_SPB_URL),
-    'https://r.jina.ai/http://driff.ru/fuel-dynamics/dt/sankt-peterburg/'
-  ];
-
-  const fuelConfig = {
-    maxCacheAgeMinutes: 180,
-    providers: [
-      new DriffFuelProvider({
-        label: 'Driff ДТ (Санкт-Петербург)',
-        urls: DRIFF_PROXY_URLS
-      }),
-      new HtmlFuelProvider({
-        label: 'Лукойл (парсер через прокси)',
-        url: 'https://api.allorigins.win/raw?url=https://auto.lukoil.ru/ru/Prices',
-        pattern: /ДТ[^0-9]{0,40}(\d+[\.,]\d{1,2})/i
-      })
-    ]
-  };
-
-  const state = {
-    fuelCache: loadFuelCache(),
-    requests: [],
-    historyRange: 'all'
-  };
-
-  state.requests = loadRequests(getCurrentFuelPriceNumber());
-
-  const els = {
-    navButtons: Array.from(document.querySelectorAll('.bottom-nav-btn')),
-    sections: Array.from(document.querySelectorAll('.section')),
-
-    requestForm: document.getElementById('requestForm'),
-    formMessage: document.getElementById('formMessage'),
-
-    worksList: document.getElementById('worksList'),
-    clientsList: document.getElementById('clientsList'),
-    clientsMessage: document.getElementById('clientsMessage'),
-
-    exportCsvBtn: document.getElementById('exportCsvBtn'),
-
-    historyFilterButtons: Array.from(document.querySelectorAll('.history-filter-btn')),
-    historyTableBody: document.getElementById('historyTableBody'),
-    exportHistoryCsvBtn: document.getElementById('exportHistoryCsvBtn'),
-    historyMessage: document.getElementById('historyMessage'),
-
-    refreshFuelBtn: document.getElementById('refreshFuelBtn'),
-    fuelPrice: document.getElementById('fuelPrice'),
-    fuelMeta: document.getElementById('fuelMeta'),
-
-    nextJob: document.getElementById('nextJob'),
-
-    todayHours: document.getElementById('todayHours'),
-    todayAmount: document.getElementById('todayAmount'),
-    monthHours: document.getElementById('monthHours'),
-    monthAmount: document.getElementById('monthAmount'),
-
-    todayProfit: document.getElementById('todayProfit'),
-    perfHours: document.getElementById('perfHours'),
-    perfRevenue: document.getElementById('perfRevenue'),
-    perfFuel: document.getElementById('perfFuel'),
-    perfRevenueFill: document.getElementById('perfRevenueFill'),
-    perfFuelFill: document.getElementById('perfFuelFill'),
-
-  };
-
-  init();
-
-  function init() {
-    bindEvents();
-    setDefaultDate();
-    renderAll();
-    refreshFuelPrice(false);
-  }
-
-  function bindEvents() {
-    els.navButtons.forEach((button) => {
-      button.addEventListener('click', () => switchSection(button.dataset.section));
-    });
-
-    els.requestForm.addEventListener('submit', handleFormSubmit);
-    els.exportCsvBtn.addEventListener('click', handleExportClientsCsv);
-
-    els.exportHistoryCsvBtn.addEventListener('click', handleExportHistoryCsv);
-    els.historyFilterButtons.forEach((button) => {
-      button.addEventListener('click', () => setHistoryRange(button.dataset.range));
-    });
-
-    els.historyTableBody.addEventListener('click', handleHistoryTableClick);
-
-    els.refreshFuelBtn.addEventListener('click', () => refreshFuelPrice(true));
-  }
-
-  function switchSection(sectionId) {
-    els.navButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.section === sectionId);
-    });
-
-    els.sections.forEach((section) => {
-      section.classList.toggle('active', section.id === sectionId);
-    });
-  }
-
-  function setHistoryRange(range) {
-    state.historyRange = ['today', 'week', 'month', 'all'].includes(range) ? range : 'all';
-
-    els.historyFilterButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.range === state.historyRange);
-    });
-
-    renderHistoryTable(getHistoryRequests());
-  }
-
-  function setDefaultDate() {
-    const dateInput = els.requestForm.elements.date;
-    if (!dateInput.value) {
-      dateInput.value = toInputDate(new Date());
-    }
-  }
-
-  function handleFormSubmit(event) {
-    event.preventDefault();
-
-    const formData = new FormData(els.requestForm);
-    const request = buildRequestFromForm(formData);
-
-    if (!isValidRequest(request)) {
-      setMessage(els.formMessage, 'Проверьте форму: заполните обязательные поля и корректные числа.', 'error');
-      return;
-    }
-
-    state.requests.push(request);
-    persistRequests();
-    renderAll();
-
-    els.requestForm.reset();
-    setDefaultDate();
-    setMessage(els.formMessage, 'Заявка успешно добавлена.', 'success');
-    switchSection('dashboard');
-  }
-
-  function buildRequestFromForm(formData) {
-    const date = String(formData.get('date') || '').trim();
-    const hours = toNonNegativeNumber(formData.get('hours'));
-    const amount = toNonNegativeNumber(formData.get('amount'));
-
-    const fuelLitersInput = String(formData.get('fuelLiters') || '').trim();
-    const parsedFuelLiters = toOptionalNonNegativeNumber(fuelLitersInput);
-    const fuelLiters = Number.isFinite(parsedFuelLiters)
-      ? parsedFuelLiters
-      : round2(hours * DEFAULT_FUEL_CONSUMPTION_PER_HOUR);
-
-    const fuelPrice = getCurrentFuelPriceNumber();
-    const fuelCost = round2(fuelLiters * fuelPrice);
-    const profit = round2(amount - fuelCost);
-
-    return {
-      id: createId(),
-      name: String(formData.get('name') || '').trim(),
-      phone: String(formData.get('phone') || '').trim(),
-      date,
-      workType: String(formData.get('workType') || '').trim(),
-      address: String(formData.get('address') || '').trim(),
-      hours,
-      amount,
-      fuelLiters,
-      fuelPrice,
-      fuelCost,
-      profit,
-      status: resolveStatus(REQUEST_STATUSES.planned, date),
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  function isValidRequest(request) {
-    return Boolean(
-      request.name &&
-        request.phone &&
-        request.date &&
-        request.workType &&
-        request.address &&
-        Number.isFinite(request.hours) &&
-        Number.isFinite(request.amount) &&
-        Number.isFinite(request.fuelLiters) &&
-        Number.isFinite(request.fuelPrice) &&
-        Number.isFinite(request.fuelCost) &&
-        Number.isFinite(request.profit) &&
-        request.hours >= 0 &&
-        request.amount >= 0 &&
-        request.fuelLiters >= 0 &&
-        request.fuelPrice > 0
-    );
-  }
-
-  function isCoreRequestValid(request) {
-    return Boolean(
-      request &&
-        request.name &&
-        request.phone &&
-        request.date &&
-        request.workType &&
-        request.address &&
-        Number.isFinite(request.hours) &&
-        Number.isFinite(request.amount) &&
-        request.hours >= 0 &&
-        request.amount >= 0
-    );
-  }
-
-  function setMessage(element, text, type) {
-    if (!element) {
-      return;
-    }
-
-    element.textContent = text || '';
-    element.classList.remove('success', 'error');
-
-    if (type) {
-      element.classList.add(type);
-    }
-  }
-
-  function renderAll() {
-    syncDerivedRequestFields();
-
-    const requestsByDateDesc = getSortedRequestsByDate(state.requests, 'desc');
-
-    renderDashboard(requestsByDateDesc);
-    renderNextJob(state.requests);
-    renderWorksList(requestsByDateDesc);
-    renderClientsList(requestsByDateDesc);
-    renderHistoryTable(getHistoryRequests());
-  }
-
-  function renderDashboard(requests) {
-    const now = new Date();
-
-    const todayRequests = requests.filter((request) => isSameDay(parseDate(request.date), now));
-    const monthRequests = requests.filter((request) => isSameMonth(parseDate(request.date), now));
-
-    const todayHours = todayRequests.reduce((sum, item) => sum + item.hours, 0);
-    const todayAmount = todayRequests.reduce((sum, item) => sum + item.amount, 0);
-    const monthHours = monthRequests.reduce((sum, item) => sum + item.hours, 0);
-    const monthAmount = monthRequests.reduce((sum, item) => sum + item.amount, 0);
-
-    const todayFuelLiters = todayRequests.reduce((sum, item) => sum + item.fuelLiters, 0);
-    const todayFuelCost = todayRequests.reduce((sum, item) => sum + item.fuelCost, 0);
-    const todayProfit = todayRequests.reduce((sum, item) => sum + item.profit, 0);
-
-    els.todayHours.textContent = formatHours(todayHours);
-    els.todayAmount.textContent = formatCurrency(todayAmount);
-    els.monthHours.textContent = formatHours(monthHours);
-    els.monthAmount.textContent = formatCurrency(monthAmount);
-
-    els.todayProfit.textContent = formatCurrency(todayProfit);
-    els.perfHours.textContent = `${formatHours(todayHours)} ч`;
-    els.perfRevenue.textContent = formatCurrency(todayAmount);
-    els.perfFuel.textContent = `${formatDecimal(todayFuelLiters)} л`;
-
-    updatePerformanceBars(todayAmount, todayFuelCost);
-  }
-
-  function updatePerformanceBars(revenue, fuelCost) {
-    const safeRevenue = Math.max(0, revenue);
-    const safeFuelCost = Math.max(0, fuelCost);
-
-    const revenueWidth = safeRevenue > 0 ? 100 : 0;
-    const fuelWidth = safeRevenue > 0 ? Math.min(100, (safeFuelCost / safeRevenue) * 100) : 0;
-
-    els.perfRevenueFill.style.width = `${revenueWidth}%`;
-    els.perfFuelFill.style.width = `${fuelWidth > 0 ? Math.max(fuelWidth, 6) : 0}%`;
-  }
-
-  function renderNextJob(requests) {
-    const today = startOfLocalDay(new Date());
-
-    const futurePlanned = [...requests]
-      .filter((request) => {
-        const date = parseDate(request.date);
-        return date && date >= today && resolveStatus(request.status, request.date) === REQUEST_STATUSES.planned;
-      })
-      .sort((a, b) => parseDate(a.date) - parseDate(b.date));
-
-    const nextJob = futurePlanned[0];
-
-    if (!nextJob) {
-      els.nextJob.innerHTML = '<div class="empty-state">Пока нет будущих заявок.</div>';
-      return;
-    }
-
-    els.nextJob.innerHTML = `
-      <div class="next-job-content">
-        <div class="next-job-main">
-          <p class="next-job-name">${escapeHtml(nextJob.name)}</p>
-          <p class="next-job-date">${escapeHtml(formatLongDate(nextJob.date))}</p>
-          <p class="next-job-type">${escapeHtml(nextJob.workType)}</p>
-          <p class="next-job-address">${escapeHtml(nextJob.address)}</p>
-        </div>
-        <div class="next-job-footer">
-          <span>Часы: ${escapeHtml(formatHours(nextJob.hours))}</span>
-          <strong>${escapeHtml(formatCurrency(nextJob.amount))}</strong>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderWorksList(requests) {
-    const recent = requests.slice(0, 6);
-
-    if (!recent.length) {
-      els.worksList.innerHTML = '<div class="empty-state">Пока нет заявок.</div>';
-      return;
-    }
-
-    els.worksList.innerHTML = recent
-      .map(
-        (request) => `
-          <article class="work-item">
-            <div class="work-item-head">
-              <strong>${escapeHtml(formatDate(request.date))}</strong>
-              <span class="tag tag-light">${escapeHtml(request.name)}</span>
-            </div>
-            <div class="work-meta">
-              <div>${escapeHtml(request.workType)}</div>
-              <div>${escapeHtml(request.address)}</div>
-            </div>
-            <div class="work-tags">
-              <span class="tag">${escapeHtml(formatHours(request.hours))} ч</span>
-              <span class="tag tag-light">${escapeHtml(formatCurrency(request.amount))}</span>
-            </div>
-          </article>
-        `
-      )
-      .join('');
-  }
-
-  function renderClientsList(requests) {
-    const clients = aggregateClients(requests);
-
-    if (!clients.length) {
-      els.clientsList.innerHTML = '<div class="empty-state">Пока нет клиентов.</div>';
-      return;
-    }
-
-    els.clientsList.innerHTML = clients
-      .map(
-        (client) => `
-          <article class="client-item">
-            <div class="client-item-head">
-              <strong>${escapeHtml(client.name)}</strong>
-              <span class="tag">${escapeHtml(formatCurrency(client.totalAmount))}</span>
-            </div>
-            <div class="client-meta">
-              <div>${escapeHtml(client.phone)}</div>
-            </div>
-            <div class="client-tags">
-              <span class="tag tag-light">Заявок: ${escapeHtml(String(client.requestsCount))}</span>
-            </div>
-          </article>
-        `
-      )
-      .join('');
-  }
-
-  function renderHistoryTable(requests) {
-    if (!requests.length) {
-      els.historyTableBody.innerHTML = '<tr><td class="empty-state" colspan="10">По выбранному фильтру нет заявок.</td></tr>';
-      return;
-    }
-
-    els.historyTableBody.innerHTML = requests
-      .map(
-        (request) => `
-          <tr>
-            <td>${escapeHtml(formatDate(request.date))}</td>
-            <td>${escapeHtml(request.name)}</td>
-            <td>${escapeHtml(request.phone)}</td>
-            <td>${escapeHtml(request.workType)}</td>
-            <td>${escapeHtml(request.address)}</td>
-            <td>${escapeHtml(formatHours(request.hours))}</td>
-            <td>${escapeHtml(formatCurrency(request.amount))}</td>
-            <td>${escapeHtml(formatDecimal(request.fuelLiters))}</td>
-            <td>${renderStatusBadge(request.status)}</td>
-            <td>
-              <button class="repeat-btn" type="button" data-repeat-id="${escapeHtml(request.id)}">Повторить</button>
-            </td>
-          </tr>
-        `
-      )
-      .join('');
-  }
-
-  function renderStatusBadge(status) {
-    const safeStatus = status === REQUEST_STATUSES.completed ? REQUEST_STATUSES.completed : REQUEST_STATUSES.planned;
-    const label = safeStatus === REQUEST_STATUSES.completed ? 'Выполнено' : 'Запланировано';
-    const className = safeStatus === REQUEST_STATUSES.completed ? 'history-status history-status-completed' : 'history-status history-status-planned';
-    return `<span class="${className}">${label}</span>`;
-  }
-
-  function getHistoryRequests() {
-    const sortedDesc = getSortedRequestsByDate(state.requests, 'desc');
-
-    if (state.historyRange === 'all') {
-      return sortedDesc;
-    }
-
-    const now = new Date();
-
-    if (state.historyRange === 'today') {
-      return sortedDesc.filter((request) => isSameDay(parseDate(request.date), now));
-    }
-
-    if (state.historyRange === 'week') {
-      const fromDate = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
-      const toDate = endOfLocalDay(now);
-      return sortedDesc.filter((request) => {
-        const date = parseDate(request.date);
-        return date && date >= fromDate && date <= toDate;
-      });
-    }
-
-    if (state.historyRange === 'month') {
-      return sortedDesc.filter((request) => isSameMonth(parseDate(request.date), now));
-    }
-
-    return sortedDesc;
-  }
-
-  function handleHistoryTableClick(event) {
-    const button = event.target.closest('button[data-repeat-id]');
-    if (!button) {
-      return;
-    }
-
-    const sourceId = button.dataset.repeatId;
-    const source = state.requests.find((item) => item.id === sourceId);
-
-    if (!source) {
-      setMessage(els.historyMessage, 'Не удалось найти исходную заявку.', 'error');
-      return;
-    }
-
-    const repeatedRaw = {
-      ...source,
-      id: createId(),
-      date: toInputDate(new Date()),
-      status: REQUEST_STATUSES.planned,
-      createdAt: new Date().toISOString()
-    };
-
-    const repeated = normalizeRequest(repeatedRaw, getCurrentFuelPriceNumber());
-
-    state.requests.push(repeated);
-    persistRequests();
-    renderAll();
-
-    setMessage(els.historyMessage, 'Повторная заявка создана с датой на сегодня.', 'success');
-  }
-
-  function aggregateClients(requests) {
-    const map = new Map();
-
-    requests.forEach((request) => {
-      const normalizedPhone = normalizePhone(request.phone);
-      const key = normalizedPhone || request.name.toLowerCase();
-
-      if (!map.has(key)) {
-        map.set(key, {
-          name: request.name,
-          phone: request.phone,
-          requestsCount: 0,
-          totalAmount: 0
-        });
-      }
-
-      const client = map.get(key);
-      client.requestsCount += 1;
-      client.totalAmount += request.amount;
-
-      if (!client.name && request.name) {
-        client.name = request.name;
-      }
-      if (!client.phone && request.phone) {
-        client.phone = request.phone;
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
-  }
-
-  function handleExportClientsCsv() {
-    const clients = aggregateClients(state.requests);
-
-    if (!clients.length) {
-      setMessage(els.clientsMessage, 'Нет данных для экспорта CSV.', 'error');
-      return;
-    }
-
-    const headers = ['Имя', 'Телефон', 'Количество заявок', 'Общая сумма'];
-    const rows = clients.map((client) => [
-      client.name,
-      client.phone,
-      String(client.requestsCount),
-      String(client.totalAmount)
-    ]);
-
-    exportCsv(headers, rows, `clients-${toInputDate(new Date())}.csv`);
-    setMessage(els.clientsMessage, 'CSV с клиентами сформирован.', 'success');
-  }
-
-  function handleExportHistoryCsv() {
-    const history = getHistoryRequests();
-
-    if (!history.length) {
-      setMessage(els.historyMessage, 'Нет данных для экспорта по выбранному фильтру.', 'error');
-      return;
-    }
-
-    const headers = [
-      'Дата',
-      'Клиент',
-      'Телефон',
-      'Тип работ',
-      'Адрес',
-      'Часы',
-      'Сумма',
-      'Топливо (л)',
-      'Цена топлива',
-      'Стоимость топлива',
-      'Чистая прибыль',
-      'Статус'
-    ];
-
-    const rows = history.map((request) => [
-      formatDate(request.date),
-      request.name,
-      request.phone,
-      request.workType,
-      request.address,
-      formatHours(request.hours),
-      String(request.amount),
-      String(request.fuelLiters),
-      String(request.fuelPrice),
-      String(request.fuelCost),
-      String(request.profit),
-      request.status
-    ]);
-
-    exportCsv(headers, rows, `history-${state.historyRange}-${toInputDate(new Date())}.csv`);
-    setMessage(els.historyMessage, 'CSV по истории сформирован.', 'success');
-  }
-
-  function exportCsv(headers, rows, fileName) {
-    const csvContent = [headers, ...rows]
-      .map((rowItems) => rowItems.map(csvEscape).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
-  }
-
-  async function refreshFuelPrice(forceRefresh) {
-    const cache = state.fuelCache;
-    const isCacheFresh = cache && getMinutesDiff(new Date(cache.fetchedAt), new Date()) <= fuelConfig.maxCacheAgeMinutes;
-
-    if (!forceRefresh && isCacheFresh) {
-      renderFuel(cache.price, cache.source, cache.fetchedAt, true);
-      return;
-    }
-
-    els.fuelMeta.textContent = 'Получаем цену из внешнего источника...';
-
-    for (const provider of fuelConfig.providers) {
-      try {
-        const result = await provider.getPrice();
-
-        state.fuelCache = result;
-        persistFuelCache();
-        renderFuel(result.price, result.source, result.fetchedAt, false);
-        return;
-      } catch (_error) {
-        // Пробуем следующий источник.
-      }
-    }
-
-    if (cache) {
-      renderFuel(cache.price, `${cache.source} (кэш)`, cache.fetchedAt, true);
-      els.fuelMeta.textContent = `Внешний источник недоступен. Показаны кэш-данные от ${formatDateTime(cache.fetchedAt)}.`;
-      return;
-    }
-
-    els.fuelPrice.textContent = '-';
-    els.fuelMeta.textContent = 'Источник цены недоступен. Показан режим без актуальной цены.';
-  }
-
-  function renderFuel(price, source, fetchedAt, fromCache) {
-    els.fuelPrice.textContent = `${formatDecimal(price)} ₽/л`;
-    els.fuelMeta.textContent = `${fromCache ? 'Кэш' : 'Источник'}: ${source}. Обновлено: ${formatDateTime(fetchedAt)}.`;
-  }
-
-  function syncDerivedRequestFields() {
-    const defaultFuelPrice = getCurrentFuelPriceNumber();
-    let hasChanges = false;
-
-    state.requests = state.requests.map((request) => {
-      const normalized = normalizeRequest(request, defaultFuelPrice);
-
-      if (requestFingerprint(request) !== requestFingerprint(normalized)) {
-        hasChanges = true;
-      }
-
-      return normalized;
-    });
-
-    if (hasChanges) {
-      persistRequests();
-    }
-  }
-
-  function requestFingerprint(request) {
-    return [
-      request.id,
-      request.name,
-      request.phone,
-      request.date,
-      request.workType,
-      request.address,
-      request.hours,
-      request.amount,
-      request.fuelLiters,
-      request.fuelPrice,
-      request.fuelCost,
-      request.profit,
-      request.status,
-      request.createdAt
-    ].join('|');
-  }
-
-  function getSortedRequestsByDate(requests, direction) {
-    const sign = direction === 'asc' ? 1 : -1;
-
-    return [...requests].sort((a, b) => {
-      const dateA = parseDate(a.date);
-      const dateB = parseDate(b.date);
-      const tsA = dateA ? dateA.getTime() : 0;
-      const tsB = dateB ? dateB.getTime() : 0;
-
-      if (tsA !== tsB) {
-        return (tsA - tsB) * sign;
-      }
-
-      const createdA = new Date(a.createdAt || 0).getTime();
-      const createdB = new Date(b.createdAt || 0).getTime();
-      return (createdA - createdB) * sign;
-    });
-  }
-
-  function loadRequests(defaultFuelPrice) {
-    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.requests), []);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .map((raw) => normalizeRequest(raw, defaultFuelPrice))
-      .filter((item) => item && isCoreRequestValid(item));
-  }
-
-  function persistRequests() {
-    localStorage.setItem(STORAGE_KEYS.requests, JSON.stringify(state.requests));
-  }
-
-  function normalizeRequest(raw, defaultFuelPrice) {
-    if (!raw || typeof raw !== 'object') {
-      return null;
-    }
-
-    const hours = toNonNegativeNumber(raw.hours);
-    const amount = toNonNegativeNumber(raw.amount);
-
-    const optionalFuelLiters = toOptionalNonNegativeNumber(raw.fuelLiters);
-    const fuelLiters = Number.isFinite(optionalFuelLiters)
-      ? optionalFuelLiters
-      : round2(hours * DEFAULT_FUEL_CONSUMPTION_PER_HOUR);
-
-    const optionalFuelPrice = toOptionalPositiveNumber(raw.fuelPrice);
-    const fuelPrice = Number.isFinite(optionalFuelPrice)
-      ? optionalFuelPrice
-      : (Number.isFinite(defaultFuelPrice) && defaultFuelPrice > 0 ? defaultFuelPrice : DEFAULT_FUEL_PRICE);
-
-    const fuelCost = round2(fuelLiters * fuelPrice);
-    const profit = round2(amount - fuelCost);
-
-    return {
-      id: String(raw.id || createId()),
-      name: String(raw.name || '').trim(),
-      phone: String(raw.phone || '').trim(),
-      date: String(raw.date || '').trim(),
-      workType: String(raw.workType || '').trim(),
-      address: String(raw.address || '').trim(),
-      hours,
-      amount,
-      fuelLiters,
-      fuelPrice,
-      fuelCost,
-      profit,
-      status: resolveStatus(raw.status, raw.date),
-      createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
-    };
-  }
-
-  function resolveStatus(rawStatus, dateInput) {
-    if (isDateBeforeToday(dateInput)) {
-      return REQUEST_STATUSES.completed;
-    }
-
-    return rawStatus === REQUEST_STATUSES.completed ? REQUEST_STATUSES.completed : REQUEST_STATUSES.planned;
-  }
-
-  function isDateBeforeToday(dateInput) {
-    const date = parseDate(dateInput);
-    if (!date) {
-      return false;
-    }
-
-    const today = startOfLocalDay(new Date());
-    return date < today;
-  }
-
-  function loadFuelCache() {
-    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.fuel), null);
-
-    if (!parsed || typeof parsed !== 'object') {
-      return null;
-    }
-
-    if (!Number.isFinite(Number(parsed.price)) || !parsed.fetchedAt || !parsed.source) {
-      return null;
-    }
-
-    return {
-      price: Number(parsed.price),
-      source: String(parsed.source),
-      fetchedAt: String(parsed.fetchedAt)
-    };
-  }
-
-  function persistFuelCache() {
-    if (!state.fuelCache) {
-      return;
-    }
-
-    localStorage.setItem(STORAGE_KEYS.fuel, JSON.stringify(state.fuelCache));
-  }
-
-  function getCurrentFuelPriceNumber() {
-    if (state.fuelCache && Number.isFinite(state.fuelCache.price) && state.fuelCache.price > 0) {
-      return state.fuelCache.price;
-    }
-    return DEFAULT_FUEL_PRICE;
-  }
-
-  function safeJsonParse(value, fallback) {
-    if (!value) {
-      return fallback;
-    }
-
-    try {
-      return JSON.parse(value);
-    } catch (_error) {
-      return fallback;
-    }
-  }
-
-  function createId() {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-      return window.crypto.randomUUID();
-    }
-    return `req-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-  }
-
-  function parseDate(dateInput) {
-    if (!dateInput) {
-      return null;
-    }
-
-    const date = new Date(`${dateInput}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-
-  function isSameDay(a, b) {
-    return Boolean(a) && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  }
-
-  function isSameMonth(a, b) {
-    return Boolean(a) && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
-  }
-
-  function startOfLocalDay(date) {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  }
-
-  function endOfLocalDay(date) {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-  }
-
-  function toInputDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  function formatDate(dateInput) {
-    const date = parseDate(dateInput);
-    if (!date) {
-      return '-';
-    }
-
-    return new Intl.DateTimeFormat('ru-RU').format(date);
-  }
-
-  function formatLongDate(dateInput) {
-    const date = parseDate(dateInput);
-    if (!date) {
-      return '-';
-    }
-
-    return new Intl.DateTimeFormat('ru-RU', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'long'
-    }).format(date);
-  }
-
-  function formatDateTime(isoString) {
-    const date = new Date(isoString);
-    if (Number.isNaN(date.getTime())) {
-      return '-';
-    }
-
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  }
-
-  function formatHours(value) {
-    return Number.isInteger(value) ? String(value) : formatDecimal(value);
-  }
-
-  function formatDecimal(value) {
-    return new Intl.NumberFormat('ru-RU', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(value);
-  }
-
-  function formatCurrency(value) {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      maximumFractionDigits: 0
-    }).format(value);
-  }
-
-  function normalizePhone(phone) {
-    return String(phone || '').replace(/\D/g, '');
-  }
-
-  function csvEscape(value) {
-    const escaped = String(value ?? '').replace(/"/g, '""');
-    return `"${escaped}"`;
-  }
-
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function getMinutesDiff(from, to) {
-    return Math.abs((to.getTime() - from.getTime()) / 60000);
-  }
-
-  function toNonNegativeNumber(value) {
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < 0) {
-      return 0;
-    }
-    return number;
-  }
-
-  function toOptionalNonNegativeNumber(value) {
-    if (value === null || value === undefined || value === '') {
-      return NaN;
-    }
-
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < 0) {
-      return NaN;
-    }
-
-    return number;
-  }
-
-  function toOptionalPositiveNumber(value) {
-    if (value === null || value === undefined || value === '') {
-      return NaN;
-    }
-
-    const number = Number(value);
-    if (!Number.isFinite(number) || number <= 0) {
-      return NaN;
-    }
-
-    return number;
-  }
-
-  function round2(value) {
-    return Math.round(Number(value) * 100) / 100;
-  }
-
-  // --- Провайдеры цены топлива (расширяемая архитектура) ---
-
-  function DriffFuelProvider({ label, urls }) {
-    this.label = label;
-    this.urls = Array.isArray(urls) ? urls : [];
-  }
-
-  DriffFuelProvider.prototype.getPrice = async function getPrice() {
-    for (const url of this.urls) {
-      try {
-        const response = await fetch(url, {
-          cache: 'no-store',
-          headers: {
-            Accept: 'text/html,application/json;q=0.9,*/*;q=0.8'
-          }
-        });
-
-        if (!response.ok) {
-          continue;
-        }
-
-        const html = await response.text();
-        const price = extractDriffDieselPrice(html);
-
-        if (!Number.isFinite(price) || price <= 0) {
-          continue;
-        }
-
-        return {
-          price,
-          source: this.label,
-          fetchedAt: new Date().toISOString()
-        };
-      } catch (_error) {
-        // Пробуем следующий прокси-источник.
-      }
-    }
-
-    throw new Error('Driff provider unavailable');
-  };
-
-  function extractDriffDieselPrice(html) {
-    const raw = String(html || '');
-    if (!raw) {
-      return null;
-    }
-
-    const plain = raw
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/\s+/g, ' ');
-
-    const keywordPatterns = [
-      /(?:дт|дизел[ья])[^0-9]{0,80}(\d{2,3}(?:[\.,]\d{1,2})?)/i,
-      /(?:цена|стоимост[ьи]|средн\w*)[^0-9]{0,80}(\d{2,3}(?:[\.,]\d{1,2})?)/i
-    ];
-
-    for (const pattern of keywordPatterns) {
-      const match = plain.match(pattern) || raw.match(pattern);
-      if (match && match[1]) {
-        const value = toFuelNumber(match[1]);
-        if (Number.isFinite(value) && value >= 35 && value <= 120) {
-          return value;
-        }
-      }
-    }
-
-    const currencyMatches = Array.from(raw.matchAll(/(\d{2,3}(?:[\.,]\d{1,2})?)\s*(?:₽|руб)/gi)).map((item) => item[1]);
-    const jsonMatches = Array.from(raw.matchAll(/"(?:price|value|cost)"\s*:\s*"?(\d{2,3}(?:[\.,]\d{1,2})?)/gi)).map((item) => item[1]);
-    const genericMatches = Array.from(plain.matchAll(/\b(\d{2,3}(?:[\.,]\d{1,2})?)\b/g)).map((item) => item[1]);
-
-    return pickPlausibleFuelPrice([...currencyMatches, ...jsonMatches, ...genericMatches]);
-  }
-
-  function pickPlausibleFuelPrice(values) {
-    const normalized = values
-      .map(toFuelNumber)
-      .filter((value) => Number.isFinite(value) && value >= 35 && value <= 120);
-
-    if (!normalized.length) {
-      return null;
-    }
-
-    const decimalValues = normalized.filter((value) => !Number.isInteger(value));
-    const pool = decimalValues.length ? decimalValues : normalized;
-    const sample = pool.slice(-7);
-    const avg = sample.reduce((sum, value) => sum + value, 0) / sample.length;
-
-    return Number(avg.toFixed(2));
-  }
-
-  function toFuelNumber(input) {
-    const value = Number(String(input).replace(',', '.'));
-    return Number.isFinite(value) ? value : NaN;
-  }
-
-  function HtmlFuelProvider({ label, url, pattern }) {
-    this.label = label;
-    this.url = url;
-    this.pattern = pattern;
-  }
-
-  HtmlFuelProvider.prototype.getPrice = async function getPrice() {
-    const response = await fetch(this.url, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`HTML provider failed: ${response.status}`);
-    }
-
-    const html = await response.text();
-    const matched = html.match(this.pattern);
-
-    if (!matched || !matched[1]) {
-      throw new Error('HTML provider did not find diesel price');
-    }
-
-    const price = Number(String(matched[1]).replace(',', '.'));
-    if (!Number.isFinite(price) || price <= 0) {
-      throw new Error('HTML provider returned invalid price');
-    }
-
-    return {
-      price,
-      source: this.label,
-      fetchedAt: new Date().toISOString()
-    };
-  };
-})();
-
-
-
-
-
-
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
