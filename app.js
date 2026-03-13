@@ -7,6 +7,8 @@
     clients: 'mini_crm_clients_v1',
     expenses: 'mini_crm_expenses_v1',
     historicalEntries: 'mini_crm_historical_entries_v1',
+    appSettings: 'mini_crm_app_settings_v1',
+    serviceSettings: 'mini_crm_service_settings_v1',
     fuel: 'mini_crm_fuel_cache_v1',
     ui: 'mini_crm_ui_state_v1'
   };
@@ -14,6 +16,11 @@
   const DEFAULT_FUEL_CONSUMPTION_PER_HOUR = 10;
   const DEFAULT_FUEL_PRICE = 56;
   const DEFAULT_OPERATOR_RATE = 1000;
+  const DEFAULT_SERVICE_SETTINGS = {
+    serviceIntervalHours: 250,
+    lastServiceHours: 0,
+    currentMachineHours: 0
+  };
 
   const STATUSES = {
     planned: 'planned',
@@ -63,7 +70,12 @@
     expenses: [],
     historicalEntries: [],
     clients: [],
+    appSettings: loadAppSettings(),
+    serviceSettings: null,
     ui: loadUiState(),
+    currentView: 'main',
+    selectedJobId: null,
+    jobEditingId: null,
     expenseEditingId: null,
     historicalEditingId: null
   };
@@ -72,21 +84,26 @@
   state.expenses = loadExpenses();
   state.historicalEntries = loadHistoricalEntries();
   state.clients = deriveClients(state.jobs);
+  state.serviceSettings = loadServiceSettings(state.jobs);
 
   const els = {
     navButtons: Array.from(document.querySelectorAll('.bottom-nav-btn')),
     sections: Array.from(document.querySelectorAll('.section')),
+    mobileApp: document.querySelector('.mobile-app'),
 
     jobForm: document.getElementById('jobForm'),
     jobFormMessage: document.getElementById('jobFormMessage'),
     operatorPayMode: document.getElementById('operatorPayMode'),
     operatorPayWrap: document.getElementById('operatorPayWrap'),
+    jobSubmitBtn: document.getElementById('jobSubmitBtn'),
+    cancelJobEditBtn: document.getElementById('cancelJobEditBtn'),
 
     previewFuelCost: document.getElementById('previewFuelCost'),
     previewOperatorPay: document.getElementById('previewOperatorPay'),
     previewNetProfit: document.getElementById('previewNetProfit'),
 
     historyRangeFilters: Array.from(document.querySelectorAll('#historyRangeFilters .filter-btn')),
+    historyPaymentFilters: Array.from(document.querySelectorAll('#historyPaymentFilters .filter-btn')),
     historyTableBody: document.getElementById('historyTableBody'),
     exportHistoryCsvBtn: document.getElementById('exportHistoryCsvBtn'),
     historyMessage: document.getElementById('historyMessage'),
@@ -115,11 +132,22 @@
     clientsMessage: document.getElementById('clientsMessage'),
 
     nextJob: document.getElementById('nextJob'),
+    futureJobsList: document.getElementById('futureJobsList'),
+    archiveJobsTableBody: document.getElementById('archiveJobsTableBody'),
 
     todayHoursCard: document.getElementById('todayHoursCard'),
     todayRevenueCard: document.getElementById('todayRevenueCard'),
     todayExpensesCard: document.getElementById('todayExpensesCard'),
     todayNetCard: document.getElementById('todayNetCard'),
+    debtCard: document.getElementById('debtCard'),
+
+    serviceAlertPanel: document.getElementById('serviceAlertPanel'),
+    serviceAlertTitle: document.getElementById('serviceAlertTitle'),
+    serviceCurrentHours: document.getElementById('serviceCurrentHours'),
+    serviceLastHours: document.getElementById('serviceLastHours'),
+    servicePassedHours: document.getElementById('servicePassedHours'),
+    serviceRemainingHours: document.getElementById('serviceRemainingHours'),
+    markServiceBtn: document.getElementById('markServiceBtn'),
 
 
     lifetimeRevenueCard: document.getElementById('lifetimeRevenueCard'),
@@ -141,6 +169,19 @@
     monthOther: document.getElementById('monthOther'),
     monthNet: document.getElementById('monthNet'),
 
+    downloadBackupBtn: document.getElementById('downloadBackupBtn'),
+    openRestoreDialogBtn: document.getElementById('openRestoreDialogBtn'),
+    restoreBackupInput: document.getElementById('restoreBackupInput'),
+    backupMessage: document.getElementById('backupMessage'),
+
+    jobDetailsBackBtn: document.getElementById('jobDetailsBackBtn'),
+    jobDetailsContent: document.getElementById('jobDetailsContent'),
+    jobDetailsEditBtn: document.getElementById('jobDetailsEditBtn'),
+    jobDetailsDeleteBtn: document.getElementById('jobDetailsDeleteBtn'),
+    jobDetailsPaidBtn: document.getElementById('jobDetailsPaidBtn'),
+    jobDetailsCompleteBtn: document.getElementById('jobDetailsCompleteBtn'),
+    jobDetailsMessage: document.getElementById('jobDetailsMessage'),
+
     refreshFuelBtn: document.getElementById('refreshFuelBtn'),
     fuelPrice: document.getElementById('fuelPrice'),
     fuelMeta: document.getElementById('fuelMeta')
@@ -154,6 +195,8 @@
     syncUiFilters();
     applyUiStateSection();
     syncDerivedJobFields();
+    persistAppSettings();
+    persistServiceSettings();
     renderAll();
     refreshFuelPrice(false);
   }
@@ -165,6 +208,7 @@
 
     els.jobForm.addEventListener('submit', handleJobSubmit);
     els.jobForm.addEventListener('input', renderJobPreview);
+    els.cancelJobEditBtn.addEventListener('click', cancelJobEdit);
     els.operatorPayMode.addEventListener('change', () => {
       toggleOperatorManualInput();
       renderJobPreview();
@@ -173,9 +217,11 @@
     els.historyRangeFilters.forEach((button) => {
       button.addEventListener('click', () => setHistoryRange(button.dataset.range));
     });
+    els.historyPaymentFilters.forEach((button) => {
+      button.addEventListener('click', () => setHistoryPaymentFilter(button.dataset.payment));
+    });
     els.exportHistoryCsvBtn.addEventListener('click', handleExportHistoryCsv);
     els.historyTableBody.addEventListener('click', handleHistoryClick);
-
 
     els.historicalForm.addEventListener('submit', handleHistoricalSubmit);
     els.cancelHistoricalEditBtn.addEventListener('click', cancelHistoricalEdit);
@@ -197,22 +243,33 @@
 
     els.exportClientsCsvBtn.addEventListener('click', handleExportClientsCsv);
 
+    els.nextJob.addEventListener('click', handleNextJobClick);
+    els.futureJobsList.addEventListener('click', handleFutureJobsClick);
+    els.archiveJobsTableBody.addEventListener('click', handleArchiveJobsClick);
+
+    els.jobDetailsBackBtn.addEventListener('click', closeJobDetails);
+    els.jobDetailsEditBtn.addEventListener('click', handleEditJobFromDetails);
+    els.jobDetailsDeleteBtn.addEventListener('click', handleDeleteJobFromDetails);
+    els.jobDetailsPaidBtn.addEventListener('click', handleTogglePaidFromDetails);
+    els.jobDetailsCompleteBtn.addEventListener('click', handleCompleteJobFromDetails);
+
+    els.markServiceBtn.addEventListener('click', handleMarkService);
+    els.downloadBackupBtn.addEventListener('click', handleDownloadBackup);
+    els.openRestoreDialogBtn.addEventListener('click', () => els.restoreBackupInput.click());
+    els.restoreBackupInput.addEventListener('change', handleRestoreBackup);
+
     els.refreshFuelBtn.addEventListener('click', () => refreshFuelPrice(true));
   }
 
   function switchSection(sectionId) {
     const safeSection = getValidSection(sectionId);
 
-    els.navButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.section === safeSection);
-    });
-
-    els.sections.forEach((section) => {
-      section.classList.toggle('active', section.id === safeSection);
-    });
-
     state.ui.section = safeSection;
+    state.currentView = 'main';
+    state.selectedJobId = null;
+
     persistUiState();
+    renderView();
   }
 
   function getValidSection(sectionId) {
@@ -221,7 +278,55 @@
   }
 
   function applyUiStateSection() {
-    switchSection(state.ui.section || 'dashboard');
+    state.ui.section = getValidSection(state.ui.section || 'dashboard');
+    state.currentView = 'main';
+    state.selectedJobId = null;
+    renderView();
+  }
+
+  function renderView() {
+    const mainSection = getValidSection(state.ui.section || 'dashboard');
+    const isDetails = state.currentView === 'job-details' && Boolean(state.selectedJobId);
+
+    els.navButtons.forEach((button) => {
+      button.classList.toggle('active', !isDetails && button.dataset.section === mainSection);
+    });
+
+    els.sections.forEach((section) => {
+      if (isDetails) {
+        section.classList.toggle('active', section.id === 'job-details');
+      } else {
+        section.classList.toggle('active', section.id === mainSection);
+      }
+    });
+
+    els.mobileApp.classList.toggle('details-open', isDetails);
+  }
+
+  function openJobDetails(jobId) {
+    const job = state.jobs.find((item) => item.id === jobId);
+    if (!job) {
+      return;
+    }
+
+    state.selectedJobId = job.id;
+    state.currentView = 'job-details';
+    renderJobDetails();
+    renderView();
+  }
+
+  function closeJobDetails() {
+    state.currentView = 'main';
+    state.selectedJobId = null;
+    setMessage(els.jobDetailsMessage, '', null);
+    renderView();
+  }
+
+  function getSelectedJob() {
+    if (!state.selectedJobId) {
+      return null;
+    }
+    return state.jobs.find((job) => job.id === state.selectedJobId) || null;
   }
 
   function setDefaultDates() {
@@ -263,6 +368,13 @@
       button.classList.toggle('active', button.dataset.range === historyRange);
     });
 
+    const historyPaymentFilter = ['all', 'paid', 'debt'].includes(state.ui.historyPaymentFilter) ? state.ui.historyPaymentFilter : 'all';
+    state.ui.historyPaymentFilter = historyPaymentFilter;
+
+    els.historyPaymentFilters.forEach((button) => {
+      button.classList.toggle('active', button.dataset.payment === historyPaymentFilter);
+    });
+
     const expenseRange = ['today', 'month', 'all'].includes(state.ui.expenseRange) ? state.ui.expenseRange : 'all';
     state.ui.expenseRange = expenseRange;
 
@@ -287,6 +399,13 @@
     renderHistoryTable();
   }
 
+  function setHistoryPaymentFilter(filter) {
+    state.ui.historyPaymentFilter = ['all', 'paid', 'debt'].includes(filter) ? filter : 'all';
+    syncUiFilters();
+    persistUiState();
+    renderHistoryTable();
+  }
+
   function setExpenseRange(range) {
     state.ui.expenseRange = ['today', 'month', 'all'].includes(range) ? range : 'all';
     syncUiFilters();
@@ -306,18 +425,57 @@
 
     const formData = new FormData(els.jobForm);
     const job = buildJobFromForm(formData);
+    const editingId = state.jobEditingId;
+    const existingJob = editingId ? state.jobs.find((item) => item.id === editingId) : null;
+
+    if (existingJob && existingJob.status === STATUSES.completed) {
+      job.status = STATUSES.completed;
+      if (!Number.isFinite(job.currentHours) && Number.isFinite(existingJob.currentHours)) {
+        job.currentHours = existingJob.currentHours;
+      }
+    }
 
     if (!isJobValid(job)) {
-      setMessage(els.jobFormMessage, 'Проверьте форму заявки: заполните обязательные поля и числа.', 'error');
+      const needsHours = job.status === STATUSES.completed && !Number.isFinite(job.currentHours);
+      const message = needsHours
+        ? 'Для выполненной заявки заполните поле "Текущие моточасы".'
+        : 'Проверьте форму заявки: заполните обязательные поля и числа.';
+      setMessage(els.jobFormMessage, message, 'error');
       return;
     }
 
-    state.jobs.push(job);
+    if (editingId && existingJob) {
+      job.id = existingJob.id;
+      job.createdAt = existingJob.createdAt;
+      job.comment = existingJob.comment || '';
+
+      if (job.paid === true && existingJob.paid === true && existingJob.paidAt) {
+        job.paidAt = existingJob.paidAt;
+      }
+
+      if (job.paid !== true) {
+        job.paidAt = null;
+      }
+
+      const index = state.jobs.findIndex((item) => item.id === editingId);
+      if (index >= 0) {
+        state.jobs[index] = job;
+      }
+      setMessage(els.jobFormMessage, 'Заявка обновлена.', 'success');
+    } else {
+      state.jobs.push(job);
+      setMessage(els.jobFormMessage, 'Заявка добавлена.', 'success');
+    }
+
+    if (job.status === STATUSES.completed && Number.isFinite(job.currentHours)) {
+      updateCurrentMachineHours(job.currentHours);
+    }
+
     persistJobs();
+    resetJobEditState();
 
     els.jobForm.reset();
     setDefaultDates();
-    setMessage(els.jobFormMessage, 'Заявка добавлена.', 'success');
 
     renderAll();
     switchSection('dashboard');
@@ -353,6 +511,14 @@
       : round2(toNonNegativeNumber(operatorPayInput));
 
     const jobNetProfit = round2(amount - fuelCost - operatorPay);
+    const status = resolveStatus(STATUSES.planned, date);
+
+    const currentHoursInput = String(formData.get('currentHours') || '').trim();
+    const currentHours = Number.isFinite(toOptionalNonNegativeNumber(currentHoursInput))
+      ? round2(toOptionalNonNegativeNumber(currentHoursInput))
+      : null;
+
+    const isPaid = formData.get('paid') === 'on';
 
     return {
       id: createId('job'),
@@ -373,11 +539,64 @@
       operatorPayMode,
 
       jobNetProfit,
-      status: resolveStatus(STATUSES.planned, date),
+      currentHours,
+      paid: isPaid,
+      paidAt: isPaid ? new Date().toISOString() : null,
+      comment: '',
+      status,
       createdAt: new Date().toISOString()
     };
   }
 
+    function startJobEdit(jobId) {
+    const job = state.jobs.find((item) => item.id === jobId);
+    if (!job) {
+      return;
+    }
+
+    state.jobEditingId = job.id;
+    const form = els.jobForm.elements;
+
+    form.jobId.value = job.id;
+    form.name.value = job.name || '';
+    form.phone.value = job.phone || '';
+    form.date.value = job.date || toInputDate(new Date());
+    form.workType.value = job.workType || '';
+    form.address.value = job.address || '';
+    form.hours.value = Number.isFinite(job.hours) ? String(job.hours) : '';
+    form.amount.value = Number.isFinite(job.amount) ? String(job.amount) : '';
+    form.currentHours.value = Number.isFinite(job.currentHours) ? String(job.currentHours) : '';
+
+    form.fuelLiters.value = Number.isFinite(job.fuelLiters) ? String(job.fuelLiters) : '';
+    form.fuelPrice.value = Number.isFinite(job.fuelPrice) ? String(job.fuelPrice) : '';
+    form.operatorRate.value = Number.isFinite(job.operatorRate) ? String(job.operatorRate) : '';
+    form.operatorPayMode.value = job.operatorPayMode === OPERATOR_PAY_MODES.manual ? OPERATOR_PAY_MODES.manual : OPERATOR_PAY_MODES.auto;
+    form.operatorPay.value = Number.isFinite(job.operatorPay) ? String(job.operatorPay) : '';
+    form.paid.checked = job.paid === true;
+
+    els.jobSubmitBtn.textContent = 'Сохранить заявку';
+    els.cancelJobEditBtn.classList.remove('hidden');
+
+    toggleOperatorManualInput();
+    renderJobPreview();
+    setMessage(els.jobFormMessage, 'Режим редактирования заявки.', null);
+
+    switchSection('add-job');
+  }
+
+  function resetJobEditState() {
+    state.jobEditingId = null;
+    els.jobForm.elements.jobId.value = '';
+    els.jobSubmitBtn.textContent = 'Добавить заявку';
+    els.cancelJobEditBtn.classList.add('hidden');
+  }
+
+  function cancelJobEdit() {
+    resetJobEditState();
+    els.jobForm.reset();
+    setDefaultDates();
+    setMessage(els.jobFormMessage, 'Редактирование заявки отменено.', null);
+  }
   function toggleOperatorManualInput() {
     const mode = els.jobForm.elements.operatorPayMode.value;
     const isManual = mode === OPERATOR_PAY_MODES.manual;
@@ -418,6 +637,9 @@
   }
 
   function isJobValid(job) {
+    const hasCurrentHoursIfCompleted = job.status !== STATUSES.completed
+      || (Number.isFinite(job.currentHours) && job.currentHours >= 0);
+
     return Boolean(
       job.name &&
       job.phone &&
@@ -431,7 +653,9 @@
       Number.isFinite(job.fuelCost) &&
       Number.isFinite(job.operatorRate) && job.operatorRate >= 0 &&
       Number.isFinite(job.operatorPay) && job.operatorPay >= 0 &&
-      Number.isFinite(job.jobNetProfit)
+      Number.isFinite(job.jobNetProfit) &&
+      typeof job.paid === 'boolean' &&
+      hasCurrentHoursIfCompleted
     );
   }
 
@@ -443,12 +667,20 @@
 
     renderDashboard();
     renderNextJob();
+    renderFutureJobs();
     renderHistoryTable();
+    renderArchiveJobsTable();
     renderHistoricalTable();
     renderExpensesTable();
     renderClients();
     populateExpenseJobOptions();
     renderJobPreview();
+
+    if (state.currentView === 'job-details') {
+      renderJobDetails();
+    }
+
+    renderView();
   }
 
   function renderDashboard() {
@@ -473,6 +705,11 @@
     els.todayRevenueCard.textContent = formatCurrency(todayIncome);
     els.todayExpensesCard.textContent = formatCurrency(todayTotalExpenses);
     els.todayNetCard.textContent = formatCurrency(todayNetProfit);
+
+    const debtAmount = round2(state.jobs
+      .filter((job) => job.status === STATUSES.completed && job.paid !== true)
+      .reduce((sum, job) => sum + toNonNegativeNumber(job.amount), 0));
+    els.debtCard.textContent = formatCurrency(debtAmount);
 
 
     const liveRevenue = sumBy(state.jobs, 'amount');
@@ -515,6 +752,44 @@
     els.monthParts.textContent = formatCurrency(monthParts);
     els.monthOther.textContent = formatCurrency(monthOther);
     els.monthNet.textContent = formatCurrency(monthNet);
+
+    renderServiceInfo();
+  }
+
+  function renderServiceInfo() {
+    const settings = state.serviceSettings || DEFAULT_SERVICE_SETTINGS;
+    const interval = toPositiveOrDefault(settings.serviceIntervalHours, DEFAULT_SERVICE_SETTINGS.serviceIntervalHours);
+    const current = toNonNegativeNumber(settings.currentMachineHours);
+    const last = toNonNegativeNumber(settings.lastServiceHours);
+    const passed = Math.max(0, round2(current - last));
+    const remaining = Math.max(0, round2(interval - passed));
+    const isUrgent = passed >= interval;
+
+    els.serviceAlertPanel.classList.toggle('urgent', isUrgent);
+    els.serviceAlertTitle.textContent = isUrgent ? 'Срочно ТО!' : 'Контроль ТО';
+    els.serviceCurrentHours.textContent = `${formatHours(current)} мч`;
+    els.serviceLastHours.textContent = `${formatHours(last)} мч`;
+    els.servicePassedHours.textContent = `${formatHours(passed)} мч`;
+    els.serviceRemainingHours.textContent = `${formatHours(remaining)} мч`;
+  }
+
+  function handleMarkService() {
+    const current = toNonNegativeNumber(state.serviceSettings.currentMachineHours);
+    state.serviceSettings.lastServiceHours = current;
+    persistServiceSettings();
+    renderServiceInfo();
+  }
+
+  function updateCurrentMachineHours(hours) {
+    const value = Number(hours);
+    if (!Number.isFinite(value) || value < 0) {
+      return;
+    }
+
+    if (value > toNonNegativeNumber(state.serviceSettings.currentMachineHours)) {
+      state.serviceSettings.currentMachineHours = round2(value);
+      persistServiceSettings();
+    }
   }
 
   function renderNextJob() {
@@ -530,10 +805,12 @@
     if (!nextJob) {
       els.nextJob.className = 'empty-state';
       els.nextJob.textContent = 'Пока нет будущих заявок.';
+      delete els.nextJob.dataset.openJobId;
       return;
     }
 
-    els.nextJob.className = '';
+    els.nextJob.className = 'is-clickable';
+    els.nextJob.dataset.openJobId = nextJob.id;
     els.nextJob.innerHTML = `
       <div class="next-job-main">
         <strong>${escapeHtml(nextJob.name)}</strong>
@@ -548,17 +825,97 @@
     `;
   }
 
+  function handleNextJobClick(event) {
+    const target = event.target.closest('[data-open-job-id]');
+    if (!target) {
+      return;
+    }
+
+    openJobDetails(target.dataset.openJobId);
+  }
+
+  function renderFutureJobs() {
+    const today = startOfLocalDay(new Date());
+    const futureJobs = [...state.jobs]
+      .filter((job) => {
+        const date = parseDate(job.date);
+        return date && date >= today && job.status === STATUSES.planned;
+      })
+      .sort((a, b) => parseDate(a.date) - parseDate(b.date));
+
+    if (!futureJobs.length) {
+      els.futureJobsList.innerHTML = '<div class="empty-state">Будущих заявок нет.</div>';
+      return;
+    }
+
+    els.futureJobsList.innerHTML = futureJobs
+      .slice(0, 12)
+      .map((job) => `
+        <button type="button" class="future-job-item is-clickable" data-open-job-id="${escapeHtml(job.id)}">
+          <div class="future-job-item-head">
+            <span>${escapeHtml(formatDate(job.date))}</span>
+            <strong>${escapeHtml(formatCurrency(job.amount))}</strong>
+          </div>
+          <div>${escapeHtml(job.name)}</div>
+          <div class="future-job-item-meta">${escapeHtml(job.workType)}</div>
+        </button>
+      `)
+      .join('');
+  }
+
+  function handleFutureJobsClick(event) {
+    const target = event.target.closest('[data-open-job-id]');
+    if (!target) {
+      return;
+    }
+
+    openJobDetails(target.dataset.openJobId);
+  }
+
+  function renderArchiveJobsTable() {
+    const archivedJobs = getSortedJobsByDate(state.jobs.filter((job) => job.status === STATUSES.completed), 'desc');
+
+    if (!archivedJobs.length) {
+      els.archiveJobsTableBody.innerHTML = '<tr><td class="empty-state" colspan="5">Архивных заявок нет.</td></tr>';
+      return;
+    }
+
+    els.archiveJobsTableBody.innerHTML = archivedJobs
+      .map((job) => `
+        <tr class="clickable-row" data-open-job-id="${escapeHtml(job.id)}">
+          <td>${escapeHtml(formatDate(job.date))}</td>
+          <td>${escapeHtml(job.name)}</td>
+          <td>${escapeHtml(job.workType)}</td>
+          <td>${escapeHtml(formatCurrency(job.amount))}</td>
+          <td>${renderPaymentBadge(job)}</td>
+        </tr>
+      `)
+      .join('');
+  }
+
+  function handleArchiveJobsClick(event) {
+    const row = event.target.closest('tr[data-open-job-id]');
+    if (!row) {
+      return;
+    }
+
+    openJobDetails(row.dataset.openJobId);
+  }
+
   function renderHistoryTable() {
     const jobs = getJobsForHistory();
 
     if (!jobs.length) {
-      els.historyTableBody.innerHTML = '<tr><td class="empty-state" colspan="12">Нет заявок по выбранному фильтру.</td></tr>';
+      els.historyTableBody.innerHTML = '<tr><td class="empty-state" colspan="13">Нет заявок по выбранному фильтру.</td></tr>';
       return;
     }
 
     els.historyTableBody.innerHTML = jobs
-      .map((job) => `
-        <tr>
+      .map((job) => {
+        const isDebt = job.status === STATUSES.completed && job.paid !== true;
+        const rowClass = isDebt ? 'debt-row clickable-row' : 'clickable-row';
+        return `
+        <tr class="${rowClass}" data-open-job-id="${escapeHtml(job.id)}">
           <td>${escapeHtml(formatDate(job.date))}</td>
           <td>${escapeHtml(job.name)}</td>
           <td>${escapeHtml(job.phone)}</td>
@@ -570,69 +927,89 @@
           <td>${escapeHtml(formatCurrency(job.operatorPay))}</td>
           <td>${escapeHtml(formatCurrency(job.jobNetProfit))}</td>
           <td>${renderStatusBadge(job.status)}</td>
+          <td>${renderPaymentBadge(job)}</td>
           <td><button type="button" class="action-btn" data-repeat-job-id="${escapeHtml(job.id)}">Повторить</button></td>
         </tr>
-      `)
+      `;
+      })
       .join('');
   }
 
   function handleHistoryClick(event) {
     const repeatButton = event.target.closest('button[data-repeat-job-id]');
-    if (!repeatButton) {
+    if (repeatButton) {
+      const sourceId = repeatButton.dataset.repeatJobId;
+      const sourceJob = state.jobs.find((job) => job.id === sourceId);
+
+      if (!sourceJob) {
+        setMessage(els.historyMessage, 'Не удалось найти заявку для повтора.', 'error');
+        return;
+      }
+
+      const clone = normalizeJob({
+        ...sourceJob,
+        id: createId('job'),
+        date: toInputDate(new Date()),
+        status: STATUSES.planned,
+        currentHours: null,
+        paid: false,
+        paidAt: null,
+        createdAt: new Date().toISOString()
+      }, getCurrentFuelPriceNumber());
+
+      state.jobs.push(clone);
+      persistJobs();
+
+      renderAll();
+      setMessage(els.historyMessage, 'Заявка успешно повторена (дата: сегодня).', 'success');
       return;
     }
 
-    const sourceId = repeatButton.dataset.repeatJobId;
-    const sourceJob = state.jobs.find((job) => job.id === sourceId);
-
-    if (!sourceJob) {
-      setMessage(els.historyMessage, 'Не удалось найти заявку для повтора.', 'error');
+    const row = event.target.closest('tr[data-open-job-id]');
+    if (!row) {
       return;
     }
 
-    const clone = normalizeJob({
-      ...sourceJob,
-      id: createId('job'),
-      date: toInputDate(new Date()),
-      status: STATUSES.planned,
-      createdAt: new Date().toISOString()
-    }, getCurrentFuelPriceNumber());
-
-    state.jobs.push(clone);
-    persistJobs();
-
-    renderAll();
-    setMessage(els.historyMessage, 'Заявка успешно повторена (дата: сегодня).', 'success');
+    openJobDetails(row.dataset.openJobId);
   }
 
   function getJobsForHistory() {
     const sorted = getSortedJobsByDate(state.jobs, 'desc');
     const range = state.ui.historyRange || 'all';
+    const paymentFilter = state.ui.historyPaymentFilter || 'all';
 
-    if (range === 'all') {
-      return sorted;
+    let filteredByRange = sorted;
+
+    if (range !== 'all') {
+      const now = new Date();
+
+      if (range === 'today') {
+        filteredByRange = sorted.filter((job) => isSameDay(parseDate(job.date), now));
+      }
+
+      if (range === 'week') {
+        const start = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+        const end = endOfLocalDay(now);
+        filteredByRange = sorted.filter((job) => {
+          const date = parseDate(job.date);
+          return date && date >= start && date <= end;
+        });
+      }
+
+      if (range === 'month') {
+        filteredByRange = sorted.filter((job) => isSameMonth(parseDate(job.date), now));
+      }
     }
 
-    const now = new Date();
-
-    if (range === 'today') {
-      return sorted.filter((job) => isSameDay(parseDate(job.date), now));
+    if (paymentFilter === 'paid') {
+      return filteredByRange.filter((job) => job.status === STATUSES.completed && job.paid === true);
     }
 
-    if (range === 'week') {
-      const start = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
-      const end = endOfLocalDay(now);
-      return sorted.filter((job) => {
-        const date = parseDate(job.date);
-        return date && date >= start && date <= end;
-      });
+    if (paymentFilter === 'debt') {
+      return filteredByRange.filter((job) => job.status === STATUSES.completed && job.paid !== true);
     }
 
-    if (range === 'month') {
-      return sorted.filter((job) => isSameMonth(parseDate(job.date), now));
-    }
-
-    return sorted;
+    return filteredByRange;
   }
 
   function renderStatusBadge(status) {
@@ -642,6 +1019,159 @@
     return `<span class="${className}">${label}</span>`;
   }
 
+  function renderPaymentBadge(job) {
+    if (job.status !== STATUSES.completed) {
+      return '<span class="status-pill">-</span>';
+    }
+
+    if (job.paid === true) {
+      return '<span class="status-pill status-paid">Оплачено</span>';
+    }
+
+    return '<span class="status-pill status-debt">Не оплачено</span>';
+  }
+
+    function renderJobDetails() {
+    const job = getSelectedJob();
+    if (!job) {
+      closeJobDetails();
+      return;
+    }
+
+    const currentHours = Number.isFinite(job.currentHours) ? `${formatHours(job.currentHours)} мч` : '-';
+    const paidLabel = job.status === STATUSES.completed
+      ? (job.paid === true ? 'Оплачено' : 'Не оплачено')
+      : '-';
+    const paidAt = job.paidAt ? formatDateTime(job.paidAt) : '-';
+    const comment = String(job.comment || '').trim() || '-';
+
+    els.jobDetailsContent.innerHTML = `
+      <article class="job-details-client">
+        <strong>${escapeHtml(job.name || 'Без имени')}</strong>
+        <div>${escapeHtml(job.phone || '-')}</div>
+      </article>
+
+      <article class="job-details-grid">
+        <div class="job-details-row"><span>Дата</span><strong>${escapeHtml(formatDate(job.date))}</strong></div>
+        <div class="job-details-row"><span>Тип работ</span><strong>${escapeHtml(job.workType || '-')}</strong></div>
+        <div class="job-details-row"><span>Адрес</span><strong>${escapeHtml(job.address || '-')}</strong></div>
+        <div class="job-details-row"><span>Часы</span><strong>${escapeHtml(formatHours(job.hours))}</strong></div>
+        <div class="job-details-row"><span>Сумма</span><strong>${escapeHtml(formatCurrency(job.amount))}</strong></div>
+        <div class="job-details-row"><span>Топливо, л</span><strong>${escapeHtml(formatHours(job.fuelLiters))}</strong></div>
+        <div class="job-details-row"><span>Топливо, ₽</span><strong>${escapeHtml(formatCurrency(job.fuelCost))}</strong></div>
+        <div class="job-details-row"><span>Зарплата машиниста</span><strong>${escapeHtml(formatCurrency(job.operatorPay))}</strong></div>
+        <div class="job-details-row"><span>Прибыль по заявке</span><strong>${escapeHtml(formatCurrency(job.jobNetProfit))}</strong></div>
+        <div class="job-details-row"><span>Статус</span><strong>${job.status === STATUSES.completed ? 'Выполнено' : 'Запланировано'}</strong></div>
+        <div class="job-details-row"><span>Оплата</span><strong>${paidLabel}</strong></div>
+        <div class="job-details-row"><span>Оплачено в</span><strong>${escapeHtml(paidAt)}</strong></div>
+        <div class="job-details-row"><span>Моточасы</span><strong>${escapeHtml(currentHours)}</strong></div>
+        <div class="job-details-row"><span>Комментарий</span><strong>${escapeHtml(comment)}</strong></div>
+      </article>
+    `;
+
+    els.jobDetailsPaidBtn.textContent = job.paid === true ? 'Снять оплату' : 'Отметить оплачено';
+    els.jobDetailsCompleteBtn.classList.toggle('hidden', job.status === STATUSES.completed);
+  }
+
+  function handleEditJobFromDetails() {
+    const job = getSelectedJob();
+    if (!job) {
+      return;
+    }
+
+    startJobEdit(job.id);
+  }
+
+  function handleDeleteJobFromDetails() {
+    const job = getSelectedJob();
+    if (!job) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Удалить заявку ${job.name} от ${formatDate(job.date)}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    deleteJobById(job.id);
+    closeJobDetails();
+    renderAll();
+  }
+
+  function handleTogglePaidFromDetails() {
+    const job = getSelectedJob();
+    if (!job) {
+      return;
+    }
+
+    if (job.status !== STATUSES.completed) {
+      setMessage(els.jobDetailsMessage, 'Оплата доступна только для выполненной заявки.', 'error');
+      return;
+    }
+
+    job.paid = job.paid !== true;
+    job.paidAt = job.paid ? new Date().toISOString() : null;
+
+    persistJobs();
+    renderAll();
+    setMessage(els.jobDetailsMessage, 'Статус оплаты обновлен.', 'success');
+  }
+
+  function handleCompleteJobFromDetails() {
+    const job = getSelectedJob();
+    if (!job) {
+      return;
+    }
+
+    if (job.status === STATUSES.completed) {
+      return;
+    }
+
+    let currentHours = Number.isFinite(job.currentHours) ? job.currentHours : null;
+
+    if (!Number.isFinite(currentHours)) {
+      const input = window.prompt('Введите текущие моточасы для завершения заявки:', '');
+      if (input === null) {
+        return;
+      }
+
+      const parsed = toOptionalNonNegativeNumber(input);
+      if (!Number.isFinite(parsed)) {
+        setMessage(els.jobDetailsMessage, 'Некорректные моточасы.', 'error');
+        return;
+      }
+
+      currentHours = round2(parsed);
+    }
+
+    job.status = STATUSES.completed;
+    job.currentHours = currentHours;
+    if (typeof job.paid !== 'boolean') {
+      job.paid = false;
+    }
+
+    updateCurrentMachineHours(job.currentHours);
+    persistJobs();
+    renderAll();
+    setMessage(els.jobDetailsMessage, 'Заявка завершена.', 'success');
+  }
+
+  function deleteJobById(jobId) {
+    const exists = state.jobs.some((job) => job.id === jobId);
+    if (!exists) {
+      return;
+    }
+
+    state.jobs = state.jobs.filter((job) => job.id !== jobId);
+
+    if (state.jobEditingId === jobId) {
+      resetJobEditState();
+      els.jobForm.reset();
+      setDefaultDates();
+    }
+
+    persistJobs();
+  }
   function getExpenseCategoryLabel(category) {
     return EXPENSE_CATEGORY_LABELS[category] || EXPENSE_CATEGORY_LABELS.other;
   }
@@ -654,7 +1184,7 @@
       return;
     }
 
-    const headers = ['Дата', 'Клиент', 'Телефон', 'Тип работ', 'Адрес', 'Часы', 'Сумма', 'Топливо, л', 'Топливо, ₽', 'Машинист, ₽', 'Прибыль, ₽', 'Статус'];
+    const headers = ['Дата', 'Клиент', 'Телефон', 'Тип работ', 'Адрес', 'Часы', 'Сумма', 'Топливо, л', 'Топливо, ₽', 'Машинист, ₽', 'Прибыль, ₽', 'Статус', 'Оплата'];
 
     const rows = jobs.map((job) => [
       formatDate(job.date),
@@ -668,7 +1198,8 @@
       String(job.fuelCost),
       String(job.operatorPay),
       String(job.jobNetProfit),
-      job.status
+      job.status,
+      job.status === STATUSES.completed ? (job.paid === true ? 'Оплачено' : 'Не оплачено') : '-'
     ]);
 
     exportCsv(headers, rows, `history-${state.ui.historyRange || 'all'}-${toInputDate(new Date())}.csv`);
@@ -1057,6 +1588,120 @@
     exportCsv(headers, rows, `historical-${toInputDate(new Date())}.csv`);
     setMessage(els.historicalMessage, 'CSV архива сформирован.', 'success');
   }
+  function handleDownloadBackup() {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      jobs: state.jobs,
+      clients: state.clients,
+      expenses: state.expenses,
+      historicalEntries: state.historicalEntries,
+      appSettings: state.appSettings,
+      serviceSettings: state.serviceSettings,
+      uiState: state.ui
+    };
+
+    const fileName = `volvo-bl71b-backup-${toInputDate(new Date())}.json`;
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setMessage(els.backupMessage, 'Резервная копия создана.', 'success');
+  }
+
+  async function handleRestoreBackup(event) {
+    const fileInput = event.target;
+    const file = fileInput.files && fileInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!window.confirm('Текущие данные будут заменены. Продолжить?')) {
+      fileInput.value = '';
+      return;
+    }
+
+    try {
+      const rawText = await file.text();
+      const parsed = safeJsonParse(rawText, null);
+
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('invalid-json');
+      }
+
+      applyBackupData(parsed);
+      renderAll();
+      syncUiFilters();
+      applyUiStateSection();
+      setMessage(els.backupMessage, 'Данные успешно восстановлены.', 'success');
+    } catch (_error) {
+      setMessage(els.backupMessage, 'Не удалось восстановить данные: проверьте JSON-файл.', 'error');
+    } finally {
+      fileInput.value = '';
+    }
+  }
+
+  function applyBackupData(backup) {
+    if (!Array.isArray(backup.jobs) || !Array.isArray(backup.expenses) || !Array.isArray(backup.historicalEntries)) {
+      throw new Error('invalid-structure');
+    }
+
+    const defaultFuelPrice = getCurrentFuelPriceNumber();
+
+    state.jobs = backup.jobs
+      .map((raw) => normalizeJob(raw, defaultFuelPrice))
+      .filter((job) => job && isCoreJobValid(job));
+
+    state.expenses = backup.expenses
+      .map(normalizeExpense)
+      .filter((item) => item && isExpenseValid(item));
+
+    state.historicalEntries = backup.historicalEntries
+      .map(normalizeHistoricalEntry)
+      .filter((item) => item && isHistoricalEntryValid(item));
+
+    state.appSettings = backup.appSettings && typeof backup.appSettings === 'object'
+      ? { version: Number.isFinite(Number(backup.appSettings.version)) ? Number(backup.appSettings.version) : 1 }
+      : { version: 1 };
+
+    state.serviceSettings = normalizeServiceSettings(backup.serviceSettings, state.jobs);
+
+    const uiStateCandidate = backup.uiState && typeof backup.uiState === 'object' ? backup.uiState : null;
+    state.ui = uiStateCandidate
+      ? {
+          section: getValidSection(uiStateCandidate.section),
+          historyRange: String(uiStateCandidate.historyRange || 'all'),
+          historyPaymentFilter: String(uiStateCandidate.historyPaymentFilter || 'all'),
+          expenseRange: String(uiStateCandidate.expenseRange || 'all'),
+          expenseCategory: String(uiStateCandidate.expenseCategory || 'all')
+        }
+      : loadUiState();
+
+    state.clients = Array.isArray(backup.clients)
+      ? backup.clients.map((client) => ({
+          name: String(client.name || '').trim(),
+          phone: String(client.phone || '').trim(),
+          requestsCount: toNonNegativeNumber(client.requestsCount),
+          totalAmount: round2(toNonNegativeNumber(client.totalAmount)),
+          totalNetProfit: round2(toNonNegativeNumber(client.totalNetProfit))
+        }))
+      : deriveClients(state.jobs);
+
+    persistJobs();
+    persistExpenses();
+    persistHistoricalEntries();
+    persistClients();
+    persistAppSettings();
+    persistServiceSettings();
+    persistUiState();
+  }
   function renderClients() {
     if (!state.clients.length) {
       els.clientsList.innerHTML = '<div class="empty-state">Пока нет клиентов.</div>';
@@ -1150,18 +1795,24 @@
 
   function syncDerivedJobFields() {
     const defaultFuelPrice = getCurrentFuelPriceNumber();
-    let changed = false;
+    let jobsChanged = false;
 
     state.jobs = state.jobs.map((job) => {
       const normalized = normalizeJob(job, defaultFuelPrice);
       if (fingerprintJob(job) !== fingerprintJob(normalized)) {
-        changed = true;
+        jobsChanged = true;
       }
       return normalized;
     });
 
-    if (changed) {
+    const serviceChanged = syncServiceSettingsFromJobs();
+
+    if (jobsChanged) {
       persistJobs();
+    }
+
+    if (serviceChanged) {
+      persistServiceSettings();
     }
   }
 
@@ -1182,6 +1833,10 @@
       job.operatorPay,
       job.operatorPayMode,
       job.jobNetProfit,
+      job.currentHours,
+      job.paid,
+      job.paidAt,
+      job.comment,
       job.status,
       job.createdAt
     ].join('|');
@@ -1273,6 +1928,12 @@
       : round2(Number.isFinite(operatorPayRaw) ? operatorPayRaw : 0);
 
     const jobNetProfit = round2(amount - fuelCost - operatorPay);
+    const status = resolveStatus(raw.status, raw.date);
+
+    const currentHoursRaw = toOptionalNonNegativeNumber(raw.currentHours);
+    const currentHours = Number.isFinite(currentHoursRaw) ? round2(currentHoursRaw) : null;
+    const paid = raw.paid === true;
+    const paidAt = paid ? String(raw.paidAt || raw.createdAt || new Date().toISOString()) : null;
 
     return {
       id: String(raw.id || createId('job')),
@@ -1293,7 +1954,11 @@
       operatorPayMode,
 
       jobNetProfit,
-      status: resolveStatus(raw.status, raw.date),
+      currentHours,
+      paid,
+      paidAt,
+      comment: String(raw.comment || '').trim(),
+      status,
       createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
     };
   }
@@ -1369,6 +2034,71 @@
       createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
     };
   }
+  function loadAppSettings() {
+    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.appSettings), null);
+    if (!parsed || typeof parsed !== 'object') {
+      return { version: 1 };
+    }
+
+    return {
+      version: Number.isFinite(Number(parsed.version)) ? Number(parsed.version) : 1
+    };
+  }
+
+  function loadServiceSettings(jobs) {
+    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.serviceSettings), null);
+    return normalizeServiceSettings(parsed, jobs);
+  }
+
+  function normalizeServiceSettings(raw, jobs) {
+    const maxCurrentHoursFromJobs = getMaxCurrentHoursFromJobs(jobs);
+
+    const intervalRaw = raw && typeof raw === 'object'
+      ? toOptionalPositiveNumber(raw.serviceIntervalHours)
+      : NaN;
+    const lastRaw = raw && typeof raw === 'object'
+      ? toOptionalNonNegativeNumber(raw.lastServiceHours)
+      : NaN;
+    const currentRaw = raw && typeof raw === 'object'
+      ? toOptionalNonNegativeNumber(raw.currentMachineHours)
+      : NaN;
+
+    const serviceIntervalHours = Number.isFinite(intervalRaw)
+      ? round2(intervalRaw)
+      : DEFAULT_SERVICE_SETTINGS.serviceIntervalHours;
+    const currentMachineHours = Math.max(
+      Number.isFinite(currentRaw) ? round2(currentRaw) : DEFAULT_SERVICE_SETTINGS.currentMachineHours,
+      maxCurrentHoursFromJobs
+    );
+
+    const lastServiceHours = Number.isFinite(lastRaw)
+      ? Math.min(round2(lastRaw), currentMachineHours)
+      : DEFAULT_SERVICE_SETTINGS.lastServiceHours;
+
+    return {
+      serviceIntervalHours,
+      lastServiceHours,
+      currentMachineHours
+    };
+  }
+
+  function syncServiceSettingsFromJobs() {
+    const maxCurrentHoursFromJobs = getMaxCurrentHoursFromJobs(state.jobs);
+    if (maxCurrentHoursFromJobs > toNonNegativeNumber(state.serviceSettings.currentMachineHours)) {
+      state.serviceSettings.currentMachineHours = maxCurrentHoursFromJobs;
+      return true;
+    }
+    return false;
+  }
+
+  function getMaxCurrentHoursFromJobs(jobs) {
+    return round2((Array.isArray(jobs) ? jobs : [])
+      .filter((job) => job.status === STATUSES.completed)
+      .reduce((max, job) => {
+        const value = toOptionalNonNegativeNumber(job.currentHours);
+        return Number.isFinite(value) && value > max ? value : max;
+      }, 0));
+  }
   function loadFuelCache() {
     const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.fuel), null);
     if (!parsed || typeof parsed !== 'object') {
@@ -1393,6 +2123,7 @@
       return {
         section: 'dashboard',
         historyRange: 'all',
+        historyPaymentFilter: 'all',
         expenseRange: 'all',
         expenseCategory: 'all'
       };
@@ -1401,6 +2132,7 @@
     return {
       section: getValidSection(parsed.section),
       historyRange: String(parsed.historyRange || 'all'),
+      historyPaymentFilter: String(parsed.historyPaymentFilter || 'all'),
       expenseRange: String(parsed.expenseRange || 'all'),
       expenseCategory: String(parsed.expenseCategory || 'all')
     };
@@ -1412,6 +2144,14 @@
 
   function persistClients() {
     localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(state.clients));
+  }
+
+  function persistAppSettings() {
+    localStorage.setItem(STORAGE_KEYS.appSettings, JSON.stringify(state.appSettings));
+  }
+
+  function persistServiceSettings() {
+    localStorage.setItem(STORAGE_KEYS.serviceSettings, JSON.stringify(state.serviceSettings));
   }
 
   function persistExpenses() {
@@ -1648,6 +2388,11 @@
     return number;
   }
 
+  function toPositiveOrDefault(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+  }
+
   function round2(value) {
     return Math.round(Number(value) * 100) / 100;
   }
@@ -1814,14 +2559,3 @@
     };
   };
 })();
-
-
-
-
-
-
-
-
-
-
-

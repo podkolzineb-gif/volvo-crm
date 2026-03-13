@@ -39,7 +39,24 @@
             <p>Сегодня чистая прибыль</p>
             <strong id="todayNetCard">0 ₽</strong>
           </article>
+          <article class="kpi-card kpi-card-debt">
+            <p>Долги клиентов</p>
+            <strong id="debtCard">0 ₽</strong>
+          </article>
         </div>
+
+        <article id="serviceAlertPanel" class="panel compact-panel service-alert">
+          <h2 id="serviceAlertTitle">Контроль ТО</h2>
+          <div class="split-metrics">
+            <div><span>Текущие моточасы</span><strong id="serviceCurrentHours">0 мч</strong></div>
+            <div><span>Последнее ТО</span><strong id="serviceLastHours">0 мч</strong></div>
+            <div><span>После ТО</span><strong id="servicePassedHours">0 мч</strong></div>
+            <div><span>До следующего ТО</span><strong id="serviceRemainingHours">0 мч</strong></div>
+          </div>
+          <div class="service-actions">
+            <button id="markServiceBtn" type="button" class="export-btn">Отметить проведение ТО</button>
+          </div>
+        </article>
 
         <article class="panel compact-panel">
           <h2>Накопительный итог (включая архив)</h2>
@@ -91,6 +108,13 @@
           <div id="nextJob" class="empty-state">Пока нет будущих заявок.</div>
         </article>
 
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Будущие заявки</h2>
+          </div>
+          <div id="futureJobsList" class="future-jobs-list"></div>
+        </article>
+
         <article class="fuel-strip">
           <div class="fuel-icon">⛽</div>
           <div class="fuel-text">
@@ -106,6 +130,7 @@
         <article class="form-shell">
           <h2>Новая заявка</h2>
           <form id="jobForm" class="job-form">
+            <input type="hidden" name="jobId" value="">
             <label>Имя<input type="text" name="name" required placeholder="Петр Иванов"></label>
             <label>Телефон<input type="tel" name="phone" required placeholder="+7 923 765-43-21"></label>
             <label>Дата<input type="date" name="date" required></label>
@@ -113,6 +138,8 @@
             <label>Адрес<input type="text" name="address" required placeholder="д. Зеленово, ул. Лесная, 6"></label>
             <label>Часы работы<input type="number" name="hours" min="0" step="0.5" required placeholder="6"></label>
             <label>Сумма<input type="number" name="amount" min="0" step="1" required placeholder="30000"></label>
+            <label>Текущие моточасы (для выполненной заявки)<input type="number" name="currentHours" min="0" step="0.1" placeholder="1250"></label>
+            <label class="checkbox-row"><input type="checkbox" name="paid"> Оплачено</label>
 
             <label>Топливо, л<input type="number" name="fuelLiters" min="0" step="0.1" placeholder="Если пусто: часы × 10"></label>
             <label>Цена топлива, ₽/л<input type="number" name="fuelPrice" min="0" step="0.01" placeholder="По умолчанию из виджета"></label>
@@ -133,7 +160,10 @@
               <div><span>Прибыль по заявке, ₽</span><strong id="previewNetProfit">0 ₽</strong></div>
             </div>
 
-            <button type="submit" class="cta-btn">Добавить заявку</button>
+            <div class="form-actions">
+              <button id="jobSubmitBtn" type="submit" class="cta-btn">Добавить заявку</button>
+              <button id="cancelJobEditBtn" type="button" class="ghost-btn hidden">Отмена редактирования</button>
+            </div>
           </form>
           <p id="jobFormMessage" class="form-message" aria-live="polite"></p>
         </article>
@@ -153,11 +183,17 @@
             <button type="button" class="filter-btn active" data-range="all">Все</button>
           </div>
 
+          <div class="filters-row" id="historyPaymentFilters">
+            <button type="button" class="filter-btn active" data-payment="all">Все</button>
+            <button type="button" class="filter-btn" data-payment="paid">Оплачено</button>
+            <button type="button" class="filter-btn" data-payment="debt">Долги</button>
+          </div>
+
           <div class="table-wrap">
             <table class="history-table">
               <thead>
                 <tr>
-                  <th>Дата</th><th>Клиент</th><th>Телефон</th><th>Тип работ</th><th>Адрес</th><th>Часы</th><th>Сумма</th><th>Топливо, ₽</th><th>Машинист, ₽</th><th>Прибыль, ₽</th><th>Статус</th><th>Действие</th>
+                  <th>Дата</th><th>Клиент</th><th>Телефон</th><th>Тип работ</th><th>Адрес</th><th>Часы</th><th>Сумма</th><th>Топливо, ₽</th><th>Машинист, ₽</th><th>Прибыль, ₽</th><th>Статус</th><th>Оплата</th><th>Действие</th>
                 </tr>
               </thead>
               <tbody id="historyTableBody"></tbody>
@@ -199,6 +235,30 @@
             </table>
           </div>
           <p id="historicalMessage" class="form-message" aria-live="polite"></p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Архив заявок CRM</h2>
+          </div>
+          <div class="table-wrap">
+            <table class="archive-table">
+              <thead>
+                <tr><th>Дата</th><th>Клиент</th><th>Тип работ</th><th>Сумма</th><th>Оплата</th></tr>
+              </thead>
+              <tbody id="archiveJobsTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel compact-panel">
+          <h2>Резервная копия</h2>
+          <div class="backup-actions">
+            <button id="downloadBackupBtn" type="button" class="export-btn">Создать резервную копию</button>
+            <button id="openRestoreDialogBtn" type="button" class="ghost-btn">Восстановить из файла</button>
+            <input id="restoreBackupInput" type="file" accept=".json,application/json" class="hidden">
+          </div>
+          <p id="backupMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
 
@@ -277,6 +337,23 @@
           <p id="clientsMessage" class="form-message" aria-live="polite"></p>
         </article>
       </section>
+
+      <section class="section" id="job-details">
+        <article class="panel job-details-shell">
+          <div class="panel-head panel-head-wrap">
+            <button id="jobDetailsBackBtn" type="button" class="ghost-btn">Назад</button>
+            <h2>Детали заявки</h2>
+          </div>
+          <div id="jobDetailsContent" class="job-details-content"></div>
+          <div class="job-details-actions">
+            <button id="jobDetailsEditBtn" type="button" class="export-btn">Редактировать</button>
+            <button id="jobDetailsDeleteBtn" type="button" class="action-btn danger">Удалить</button>
+            <button id="jobDetailsPaidBtn" type="button" class="export-btn">Отметить оплачено</button>
+            <button id="jobDetailsCompleteBtn" type="button" class="cta-btn small">Завершить заявку</button>
+          </div>
+          <p id="jobDetailsMessage" class="form-message" aria-live="polite"></p>
+        </article>
+      </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Нижняя навигация">
@@ -292,3 +369,9 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
+
+

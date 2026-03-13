@@ -618,3 +618,182 @@ th {
 
 
 
+
+.kpi-card-debt {
+  background: linear-gradient(180deg, #5b3941 0%, #442a31 100%);
+  border-color: rgba(255, 132, 132, 0.35);
+}
+
+.kpi-card-debt strong {
+  color: #ffd5d5;
+}
+
+.service-alert {
+  border-color: rgba(242, 196, 0, 0.25);
+}
+
+.service-alert.urgent {
+  background: linear-gradient(180deg, #624349 0%, #4f3338 100%);
+  border-color: rgba(255, 125, 125, 0.55);
+}
+
+.service-alert.urgent h2 {
+  color: #ffd37f;
+}
+
+.service-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.checkbox-row {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700 !important;
+}
+
+.checkbox-row input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  accent-color: #f2c400;
+}
+
+.status-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d8dee8;
+}
+
+.status-paid {
+  background: rgba(48, 177, 106, 0.18);
+  color: #8ef2bc;
+  border-color: rgba(67, 198, 125, 0.45);
+}
+
+.status-debt {
+  background: rgba(255, 108, 108, 0.18);
+  color: #ffb3b3;
+  border-color: rgba(255, 117, 117, 0.55);
+}
+
+.debt-row td {
+  background: rgba(166, 40, 40, 0.12);
+}
+
+.backup-actions {
+  display: grid;
+  gap: 8px;
+}
+
+#historyPaymentFilters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+
+.mobile-app.details-open .bottom-nav {
+  display: none;
+}
+
+.mobile-app.details-open .app-main {
+  padding-bottom: 16px;
+}
+
+.is-clickable,
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row td {
+  transition: background-color 0.2s ease;
+}
+
+.clickable-row:active td {
+  background-color: rgba(242, 196, 0, 0.1);
+}
+
+.future-jobs-list {
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.future-job-item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #424752 0%, #373c45 100%);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.future-job-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.future-job-item-meta {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.job-details-shell {
+  padding-bottom: 12px;
+}
+
+.job-details-content {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.job-details-client {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #464b55 0%, #3a3f48 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.job-details-client strong {
+  font-size: 1.3rem;
+}
+
+.job-details-grid {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3f4450 0%, #343943 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.job-details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.92rem;
+}
+
+.job-details-row:last-child {
+  border-bottom: 0;
+}
+
+.job-details-row span {
+  color: var(--text-muted);
+}
+
+.job-details-row strong {
+  text-align: right;
+}
+
+.job-details-actions {
+  padding: 0 12px;
+  display: grid;
+  gap: 8px;
+}
