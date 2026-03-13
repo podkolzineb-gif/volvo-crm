@@ -42,6 +42,26 @@
         </div>
 
         <article class="panel compact-panel">
+          <h2>Накопительный итог (включая архив)</h2>
+          <div class="kpi-grid lifetime-grid">
+            <article class="kpi-card kpi-card-accent">
+              <p>Выручка за всё время</p>
+              <strong id="lifetimeRevenueCard">0 ₽</strong>
+            </article>
+            <article class="kpi-card kpi-card-dark">
+              <p>Часы за всё время</p>
+              <strong id="lifetimeHoursCard">0</strong>
+            </article>
+          </div>
+          <div class="split-metrics lifetime-splits">
+            <div><span>Выручка CRM</span><strong id="liveRevenueCard">0 ₽</strong></div>
+            <div><span>Выручка архива</span><strong id="archiveRevenueCard">0 ₽</strong></div>
+            <div><span>Часы CRM</span><strong id="liveHoursCard">0</strong></div>
+            <div><span>Часы архива</span><strong id="archiveHoursCard">0</strong></div>
+          </div>
+        </article>
+
+        <article class="panel compact-panel">
           <h2>Оперативно за сегодня</h2>
           <div class="split-metrics">
             <div><span>Топливо</span><strong id="todayFuelCost">0 ₽</strong></div>
@@ -147,6 +167,41 @@
         </article>
       </section>
 
+      <section class="section" id="archive">
+        <article class="form-shell">
+          <h2>История до CRM</h2>
+          <form id="historicalForm" class="job-form">
+            <input type="hidden" name="historicalId" value="">
+            <label>Дата<input type="date" name="date" required></label>
+            <label>Часы<input type="number" name="hours" min="0" step="0.5" required placeholder="8"></label>
+            <label>Сумма, ₽<input type="number" name="amount" min="0" step="1" required placeholder="40000"></label>
+            <label>Комментарий<input type="text" name="note" placeholder="Запись из бумажной книги"></label>
+
+            <div class="form-actions">
+              <button type="submit" class="cta-btn small">Сохранить запись</button>
+              <button type="button" id="cancelHistoricalEditBtn" class="ghost-btn hidden">Отмена редактирования</button>
+            </div>
+          </form>
+          <p id="historicalFormMessage" class="form-message" aria-live="polite"></p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head panel-head-wrap">
+            <h2>Архив бумажного учета</h2>
+            <button id="exportHistoricalCsvBtn" type="button" class="export-btn">Экспорт CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="archive-table">
+              <thead>
+                <tr><th>Дата</th><th>Часы</th><th>Сумма</th><th>Комментарий</th><th>Действие</th></tr>
+              </thead>
+              <tbody id="historicalTableBody"></tbody>
+            </table>
+          </div>
+          <p id="historicalMessage" class="form-message" aria-live="polite"></p>
+        </article>
+      </section>
+
       <section class="section" id="expenses">
         <article class="form-shell expense-form-shell">
           <h2>Расходы</h2>
@@ -155,11 +210,11 @@
             <label>Дата<input type="date" name="date" required></label>
             <label>Категория
               <select name="category" required>
-                <option value="repair">repair</option>
-                <option value="parts">parts</option>
-                <option value="fuel">fuel</option>
-                <option value="operator">operator</option>
-                <option value="other">other</option>
+                <option value="repair">Ремонт</option>
+                <option value="parts">Запчасти</option>
+                <option value="fuel">Топливо</option>
+                <option value="operator">Машинист</option>
+                <option value="other">Прочее</option>
               </select>
             </label>
             <label>Название<input type="text" name="title" required placeholder="Ремонт гидравлики"></label>
@@ -192,12 +247,12 @@
           </div>
 
           <div class="filters-row categories" id="expenseCategoryFilters">
-            <button type="button" class="filter-btn active" data-category="all">all</button>
-            <button type="button" class="filter-btn" data-category="repair">repair</button>
-            <button type="button" class="filter-btn" data-category="parts">parts</button>
-            <button type="button" class="filter-btn" data-category="fuel">fuel</button>
-            <button type="button" class="filter-btn" data-category="operator">operator</button>
-            <button type="button" class="filter-btn" data-category="other">other</button>
+            <button type="button" class="filter-btn active" data-category="all">Все</button>
+            <button type="button" class="filter-btn" data-category="repair">Ремонт</button>
+            <button type="button" class="filter-btn" data-category="parts">Запчасти</button>
+            <button type="button" class="filter-btn" data-category="fuel">Топливо</button>
+            <button type="button" class="filter-btn" data-category="operator">Машинист</button>
+            <button type="button" class="filter-btn" data-category="other">Прочее</button>
           </div>
 
           <div class="table-wrap">
@@ -228,6 +283,7 @@
       <button class="bottom-nav-btn active" type="button" data-section="dashboard">Главная</button>
       <button class="bottom-nav-btn" type="button" data-section="add-job">Заявка</button>
       <button class="bottom-nav-btn" type="button" data-section="history">История</button>
+      <button class="bottom-nav-btn" type="button" data-section="archive">Архив</button>
       <button class="bottom-nav-btn" type="button" data-section="expenses">Расходы</button>
       <button class="bottom-nav-btn" type="button" data-section="clients">Клиенты</button>
     </nav>

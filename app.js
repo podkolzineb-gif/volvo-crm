@@ -6,6 +6,7 @@
     legacyJobs: 'mini_crm_requests_v1',
     clients: 'mini_crm_clients_v1',
     expenses: 'mini_crm_expenses_v1',
+    historicalEntries: 'mini_crm_historical_entries_v1',
     fuel: 'mini_crm_fuel_cache_v1',
     ui: 'mini_crm_ui_state_v1'
   };
@@ -25,6 +26,15 @@
   };
 
   const EXPENSE_CATEGORIES = ['repair', 'parts', 'fuel', 'operator', 'other'];
+  const HISTORICAL_SOURCE = 'paper_ledger';
+  const EXPENSE_CATEGORY_LABELS = {
+    all: 'Все',
+    repair: 'Ремонт',
+    parts: 'Запчасти',
+    fuel: 'Топливо',
+    operator: 'Машинист',
+    other: 'Прочее'
+  };
 
   const DRIFF_DT_SPB_URL = 'https://driff.ru/fuel-dynamics/dt/sankt-peterburg/';
   const DRIFF_PROXY_URLS = [
@@ -51,13 +61,16 @@
     fuelCache: loadFuelCache(),
     jobs: [],
     expenses: [],
+    historicalEntries: [],
     clients: [],
     ui: loadUiState(),
-    expenseEditingId: null
+    expenseEditingId: null,
+    historicalEditingId: null
   };
 
   state.jobs = loadJobs(getCurrentFuelPriceNumber());
   state.expenses = loadExpenses();
+  state.historicalEntries = loadHistoricalEntries();
   state.clients = deriveClients(state.jobs);
 
   const els = {
@@ -77,6 +90,14 @@
     historyTableBody: document.getElementById('historyTableBody'),
     exportHistoryCsvBtn: document.getElementById('exportHistoryCsvBtn'),
     historyMessage: document.getElementById('historyMessage'),
+
+
+    historicalForm: document.getElementById('historicalForm'),
+    historicalFormMessage: document.getElementById('historicalFormMessage'),
+    cancelHistoricalEditBtn: document.getElementById('cancelHistoricalEditBtn'),
+    historicalTableBody: document.getElementById('historicalTableBody'),
+    exportHistoricalCsvBtn: document.getElementById('exportHistoricalCsvBtn'),
+    historicalMessage: document.getElementById('historicalMessage'),
 
     expenseForm: document.getElementById('expenseForm'),
     expenseRelatedJobId: document.getElementById('expenseRelatedJobId'),
@@ -99,6 +120,14 @@
     todayRevenueCard: document.getElementById('todayRevenueCard'),
     todayExpensesCard: document.getElementById('todayExpensesCard'),
     todayNetCard: document.getElementById('todayNetCard'),
+
+
+    lifetimeRevenueCard: document.getElementById('lifetimeRevenueCard'),
+    lifetimeHoursCard: document.getElementById('lifetimeHoursCard'),
+    liveRevenueCard: document.getElementById('liveRevenueCard'),
+    archiveRevenueCard: document.getElementById('archiveRevenueCard'),
+    liveHoursCard: document.getElementById('liveHoursCard'),
+    archiveHoursCard: document.getElementById('archiveHoursCard'),
 
     todayFuelCost: document.getElementById('todayFuelCost'),
     todayOperatorCost: document.getElementById('todayOperatorCost'),
@@ -147,6 +176,12 @@
     els.exportHistoryCsvBtn.addEventListener('click', handleExportHistoryCsv);
     els.historyTableBody.addEventListener('click', handleHistoryClick);
 
+
+    els.historicalForm.addEventListener('submit', handleHistoricalSubmit);
+    els.cancelHistoricalEditBtn.addEventListener('click', cancelHistoricalEdit);
+    els.historicalTableBody.addEventListener('click', handleHistoricalTableClick);
+    els.exportHistoricalCsvBtn.addEventListener('click', handleExportHistoricalCsv);
+
     els.expenseForm.addEventListener('submit', handleExpenseSubmit);
     els.cancelExpenseEditBtn.addEventListener('click', cancelExpenseEdit);
 
@@ -181,7 +216,7 @@
   }
 
   function getValidSection(sectionId) {
-    const validSections = ['dashboard', 'add-job', 'history', 'expenses', 'clients'];
+    const validSections = ['dashboard', 'add-job', 'history', 'archive', 'expenses', 'clients'];
     return validSections.includes(sectionId) ? sectionId : 'dashboard';
   }
 
@@ -197,6 +232,12 @@
     if (!els.expenseForm.elements.date.value) {
       els.expenseForm.elements.date.value = toInputDate(new Date());
     }
+
+
+    if (!els.historicalForm.elements.date.value) {
+      els.historicalForm.elements.date.value = toInputDate(new Date());
+    }
+
 
     if (!els.jobForm.elements.operatorRate.value) {
       els.jobForm.elements.operatorRate.value = String(DEFAULT_OPERATOR_RATE);
@@ -403,6 +444,7 @@
     renderDashboard();
     renderNextJob();
     renderHistoryTable();
+    renderHistoricalTable();
     renderExpensesTable();
     renderClients();
     populateExpenseJobOptions();
@@ -431,6 +473,22 @@
     els.todayRevenueCard.textContent = formatCurrency(todayIncome);
     els.todayExpensesCard.textContent = formatCurrency(todayTotalExpenses);
     els.todayNetCard.textContent = formatCurrency(todayNetProfit);
+
+
+    const liveRevenue = sumBy(state.jobs, 'amount');
+    const historicalRevenue = sumBy(state.historicalEntries, 'amount');
+    const liveHours = sumBy(state.jobs, 'hours');
+    const historicalHours = sumBy(state.historicalEntries, 'hours');
+
+    const lifetimeRevenue = round2(liveRevenue + historicalRevenue);
+    const lifetimeHours = round2(liveHours + historicalHours);
+
+    els.lifetimeRevenueCard.textContent = formatCurrency(lifetimeRevenue);
+    els.lifetimeHoursCard.textContent = formatHours(lifetimeHours);
+    els.liveRevenueCard.textContent = formatCurrency(liveRevenue);
+    els.archiveRevenueCard.textContent = formatCurrency(historicalRevenue);
+    els.liveHoursCard.textContent = formatHours(liveHours);
+    els.archiveHoursCard.textContent = formatHours(historicalHours);
 
     const todayFuelCategory = sumAmount(filterByCategory(todayExpensesItems, 'fuel'));
     const todayOperatorCategory = sumAmount(filterByCategory(todayExpensesItems, 'operator'));
@@ -582,6 +640,10 @@
     const label = safeStatus === STATUSES.completed ? 'Выполнено' : 'Запланировано';
     const className = safeStatus === STATUSES.completed ? 'status-pill status-completed' : 'status-pill status-planned';
     return `<span class="${className}">${label}</span>`;
+  }
+
+  function getExpenseCategoryLabel(category) {
+    return EXPENSE_CATEGORY_LABELS[category] || EXPENSE_CATEGORY_LABELS.other;
   }
 
   function handleExportHistoryCsv() {
@@ -746,7 +808,7 @@
       .map((expense) => `
         <tr>
           <td>${escapeHtml(formatDate(expense.date))}</td>
-          <td>${escapeHtml(expense.category)}</td>
+          <td>${escapeHtml(getExpenseCategoryLabel(expense.category))}</td>
           <td>${escapeHtml(expense.title)}</td>
           <td>${escapeHtml(formatCurrency(expense.amount))}</td>
           <td>${escapeHtml(expense.comment || '-')}</td>
@@ -803,10 +865,10 @@
       return;
     }
 
-    const headers = ['Дата', 'Категория', 'Название', 'Сумма', 'Комментарий', 'relatedJobId'];
+    const headers = ['Дата', 'Категория', 'Название', 'Сумма', 'Комментарий', 'ID связанной заявки'];
     const rows = expenses.map((item) => [
       formatDate(item.date),
-      item.category,
+      getExpenseCategoryLabel(item.category),
       item.title,
       String(item.amount),
       item.comment,
@@ -817,6 +879,184 @@
     setMessage(els.expensesMessage, 'CSV расходов сформирован.', 'success');
   }
 
+
+  function handleHistoricalSubmit(event) {
+    event.preventDefault();
+
+    const formData = new FormData(els.historicalForm);
+    const entry = buildHistoricalEntryFromForm(formData);
+
+    if (!isHistoricalEntryValid(entry)) {
+      setMessage(els.historicalFormMessage, 'Проверьте форму архива.', 'error');
+      return;
+    }
+
+    if (state.historicalEditingId) {
+      const index = state.historicalEntries.findIndex((item) => item.id === state.historicalEditingId);
+      if (index >= 0) {
+        state.historicalEntries[index] = {
+          ...entry,
+          id: state.historicalEditingId,
+          source: state.historicalEntries[index].source || HISTORICAL_SOURCE,
+          createdAt: state.historicalEntries[index].createdAt
+        };
+      }
+      state.historicalEditingId = null;
+      setMessage(els.historicalFormMessage, 'Запись архива обновлена.', 'success');
+    } else {
+      state.historicalEntries.push(entry);
+      setMessage(els.historicalFormMessage, 'Запись архива добавлена.', 'success');
+    }
+
+    persistHistoricalEntries();
+    resetHistoricalForm();
+    renderAll();
+  }
+
+  function buildHistoricalEntryFromForm(formData) {
+    return {
+      id: createId('hist'),
+      date: String(formData.get('date') || '').trim(),
+      hours: round2(toNonNegativeNumber(formData.get('hours'))),
+      amount: round2(toNonNegativeNumber(formData.get('amount'))),
+      note: String(formData.get('note') || '').trim(),
+      source: HISTORICAL_SOURCE,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function isHistoricalEntryValid(entry) {
+    return Boolean(
+      entry.date &&
+      Number.isFinite(entry.hours) && entry.hours >= 0 &&
+      Number.isFinite(entry.amount) && entry.amount >= 0 &&
+      entry.source === HISTORICAL_SOURCE
+    );
+  }
+
+  function resetHistoricalForm() {
+    els.historicalForm.reset();
+    els.historicalForm.elements.date.value = toInputDate(new Date());
+    els.historicalForm.elements.historicalId.value = '';
+    state.historicalEditingId = null;
+    els.cancelHistoricalEditBtn.classList.add('hidden');
+  }
+
+  function cancelHistoricalEdit() {
+    resetHistoricalForm();
+    setMessage(els.historicalFormMessage, 'Редактирование архива отменено.', null);
+  }
+
+  function handleHistoricalTableClick(event) {
+    const editButton = event.target.closest('button[data-edit-historical-id]');
+    if (editButton) {
+      startHistoricalEdit(editButton.dataset.editHistoricalId);
+      return;
+    }
+
+    const deleteButton = event.target.closest('button[data-delete-historical-id]');
+    if (deleteButton) {
+      deleteHistoricalEntry(deleteButton.dataset.deleteHistoricalId);
+    }
+  }
+
+  function startHistoricalEdit(entryId) {
+    const entry = state.historicalEntries.find((item) => item.id === entryId);
+    if (!entry) {
+      setMessage(els.historicalMessage, 'Запись архива не найдена.', 'error');
+      return;
+    }
+
+    state.historicalEditingId = entry.id;
+    els.historicalForm.elements.historicalId.value = entry.id;
+    els.historicalForm.elements.date.value = entry.date;
+    els.historicalForm.elements.hours.value = String(entry.hours);
+    els.historicalForm.elements.amount.value = String(entry.amount);
+    els.historicalForm.elements.note.value = entry.note || '';
+
+    els.cancelHistoricalEditBtn.classList.remove('hidden');
+    switchSection('archive');
+    setMessage(els.historicalFormMessage, 'Режим редактирования архива.', null);
+  }
+
+  function deleteHistoricalEntry(entryId) {
+    const exists = state.historicalEntries.some((item) => item.id === entryId);
+    if (!exists) {
+      setMessage(els.historicalMessage, 'Запись архива не найдена.', 'error');
+      return;
+    }
+
+    state.historicalEntries = state.historicalEntries.filter((item) => item.id !== entryId);
+    persistHistoricalEntries();
+    renderAll();
+
+    setMessage(els.historicalMessage, 'Запись архива удалена.', 'success');
+
+    if (state.historicalEditingId === entryId) {
+      resetHistoricalForm();
+    }
+  }
+
+  function getHistoricalEntriesSorted() {
+    return [...state.historicalEntries].sort((a, b) => {
+      const dA = parseDate(a.date);
+      const dB = parseDate(b.date);
+      const tsA = dA ? dA.getTime() : 0;
+      const tsB = dB ? dB.getTime() : 0;
+
+      if (tsA !== tsB) {
+        return tsB - tsA;
+      }
+
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }
+
+  function renderHistoricalTable() {
+    const entries = getHistoricalEntriesSorted();
+
+    if (!entries.length) {
+      els.historicalTableBody.innerHTML = '<tr><td class="empty-state" colspan="5">Архивных записей пока нет.</td></tr>';
+      return;
+    }
+
+    els.historicalTableBody.innerHTML = entries
+      .map((entry) => `
+        <tr>
+          <td>${escapeHtml(formatDate(entry.date))}</td>
+          <td>${escapeHtml(formatHours(entry.hours))}</td>
+          <td>${escapeHtml(formatCurrency(entry.amount))}</td>
+          <td>${escapeHtml(entry.note || '-')}</td>
+          <td>
+            <button type="button" class="action-btn" data-edit-historical-id="${escapeHtml(entry.id)}">Ред.</button>
+            <button type="button" class="action-btn danger" data-delete-historical-id="${escapeHtml(entry.id)}">Удалить</button>
+          </td>
+        </tr>
+      `)
+      .join('');
+  }
+
+  function handleExportHistoricalCsv() {
+    const entries = getHistoricalEntriesSorted();
+
+    if (!entries.length) {
+      setMessage(els.historicalMessage, 'Нет архивных записей для экспорта.', 'error');
+      return;
+    }
+
+    const headers = ['Дата', 'Часы', 'Сумма', 'Комментарий', 'Источник', 'createdAt'];
+    const rows = entries.map((entry) => [
+      formatDate(entry.date),
+      String(entry.hours),
+      String(entry.amount),
+      entry.note,
+      entry.source,
+      entry.createdAt
+    ]);
+
+    exportCsv(headers, rows, `historical-${toInputDate(new Date())}.csv`);
+    setMessage(els.historicalMessage, 'CSV архива сформирован.', 'success');
+  }
   function renderClients() {
     if (!state.clients.length) {
       els.clientsList.innerHTML = '<div class="empty-state">Пока нет клиентов.</div>';
@@ -846,7 +1086,7 @@
       return;
     }
 
-    const headers = ['Имя', 'Телефон', 'Количество заявок', 'Общая сумма', 'Чистая прибыль'];
+    const headers = ['Имя', 'Телефон', 'Количество заявок', 'Выручка', 'Чистая прибыль'];
     const rows = state.clients.map((client) => [
       client.name,
       client.phone,
@@ -1102,6 +1342,33 @@
     };
   }
 
+
+  function loadHistoricalEntries() {
+    const raw = safeJsonParse(localStorage.getItem(STORAGE_KEYS.historicalEntries), []);
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw
+      .map(normalizeHistoricalEntry)
+      .filter((item) => item && isHistoricalEntryValid(item));
+  }
+
+  function normalizeHistoricalEntry(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+
+    return {
+      id: String(raw.id || createId('hist')),
+      date: String(raw.date || '').trim(),
+      hours: round2(toNonNegativeNumber(raw.hours)),
+      amount: round2(toNonNegativeNumber(raw.amount)),
+      note: String(raw.note || '').trim(),
+      source: HISTORICAL_SOURCE,
+      createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString()
+    };
+  }
   function loadFuelCache() {
     const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEYS.fuel), null);
     if (!parsed || typeof parsed !== 'object') {
@@ -1151,6 +1418,10 @@
     localStorage.setItem(STORAGE_KEYS.expenses, JSON.stringify(state.expenses));
   }
 
+
+  function persistHistoricalEntries() {
+    localStorage.setItem(STORAGE_KEYS.historicalEntries, JSON.stringify(state.historicalEntries));
+  }
   function persistFuelCache() {
     if (state.fuelCache) {
       localStorage.setItem(STORAGE_KEYS.fuel, JSON.stringify(state.fuelCache));
@@ -1218,10 +1489,14 @@
   }
 
   function exportCsv(headers, rows, fileName) {
-    const csv = [headers, ...rows]
-      .map((row) => row.map(csvEscape).join(','))
-      .join('\n');
+    const delimiter = ';';
+    const excelSeparatorHint = `sep=${delimiter}`;
 
+    const csvBody = [headers, ...rows]
+      .map((row) => row.map(csvEscape).join(delimiter))
+      .join('\r\n');
+
+    const csv = `\uFEFF${excelSeparatorHint}\r\n${csvBody}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1385,7 +1660,12 @@
   }
 
   function csvEscape(value) {
-    return `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const normalized = String(value ?? '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/"/g, '""');
+
+    return `"${normalized}"`;
   }
 
   function escapeHtml(value) {
@@ -1534,3 +1814,14 @@
     };
   };
 })();
+
+
+
+
+
+
+
+
+
+
+

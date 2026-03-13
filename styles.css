@@ -458,7 +458,8 @@ table {
 }
 
 .history-table,
-.expenses-table {
+.expenses-table,
+.archive-table {
   min-width: 980px;
   font-size: 0.84rem;
 }
@@ -563,7 +564,7 @@ th {
   transform: translateX(-50%);
   width: min(100%, 430px);
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   background: linear-gradient(180deg, #2b2f37 0%, #232730 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   padding-bottom: env(safe-area-inset-bottom);
@@ -577,7 +578,7 @@ th {
   color: #d0d4dd;
   min-height: 62px;
   padding: 10px 2px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -596,3 +597,24 @@ th {
     border-right: 1px solid rgba(255, 255, 255, 0.15);
   }
 }
+
+.lifetime-grid {
+  margin-top: 0;
+}
+
+.lifetime-grid .kpi-card {
+  min-height: 84px;
+}
+
+.lifetime-splits {
+  margin-top: 10px;
+}
+
+.archive-table {
+  min-width: 620px;
+}
+
+
+
+
+
